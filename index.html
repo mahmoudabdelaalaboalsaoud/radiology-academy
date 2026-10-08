@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>أكاديمية الأشعة</title>
+<style>
+:root{--bg:#050b14;--c:#22d3ee;--c2:#6366f1;--t:#e6f1ff;--m:#8aa0b8;--card:rgba(13,26,44,.82);--b:rgba(34,211,238,.2);--ok:#34d399;--w:#fbbf24;--bad:#f87171}
+*{box-sizing:border-box;margin:0}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--t);min-height:100vh;overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 80% 10%,rgba(99,102,241,.22),transparent 45%),radial-gradient(circle at 15% 85%,rgba(34,211,238,.18),transparent 45%),linear-gradient(rgba(34,211,238,.05) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,rgba(34,211,238,.05) 1px,transparent 1px) 0 0/40px 40px,var(--bg)}
+.bg svg{position:absolute;left:50%;top:50%;width:min(520px,90vw);transform:translate(-50%,-50%);opacity:.13;stroke:var(--c);fill:none;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 8px var(--c))}
+.bg .scan{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--c),transparent);box-shadow:0 0 22px var(--c);opacity:.5;animation:scan 6s linear infinite}
+@keyframes scan{from{top:-3px}to{top:100%}}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.bg .scan{animation:none}*{animation:none!important;transition:none!important}}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(5,11,20,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--b);flex-wrap:wrap}
+header b{font-size:1.1rem;margin-inline-end:auto}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+.nb{background:none;border:1px solid var(--b);color:var(--t);padding:7px 12px;border-radius:10px;cursor:pointer;font:inherit;font-size:.9rem}
+.nb.on,.nb:hover{background:rgba(34,211,238,.15);border-color:var(--c)}
+main{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--b);border-radius:16px;padding:16px;backdrop-filter:blur(6px);animation:up .4s both}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:14px}
+.cc{cursor:pointer;transition:.25s;overflow:hidden;padding:0}
+.cc:hover{transform:translateY(-4px);border-color:var(--c);box-shadow:0 8px 28px rgba(34,211,238,.18)}
+.cc .im{height:120px;background:linear-gradient(135deg,var(--c2),var(--c)) center/cover;display:flex;align-items:center;justify-content:center;font-size:2.4rem}
+.cc .bd{padding:12px}
+.m{color:var(--m);font-size:.88rem}
+h2{margin:6px 0 10px}
+input,select,textarea{width:100%;background:rgba(5,11,20,.7);border:1px solid var(--b);color:var(--t);padding:11px;border-radius:10px;font:inherit;margin:5px 0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--c)}
+.btn{background:linear-gradient(135deg,var(--c2),var(--c));color:#04101c;font-weight:700;border:0;padding:11px 16px;border-radius:10px;cursor:pointer;font:inherit;font-weight:700;margin-top:6px}
+.btn:hover{filter:brightness(1.1)}
+.sm{padding:5px 9px;font-size:.8rem;margin:2px;border-radius:8px}
+.gh{background:transparent;color:var(--t);border:1px solid var(--b)}
+.auth{max-width:380px;margin:9vh auto 0;text-align:center}
+.lnk{display:block;margin-top:12px;color:var(--c);cursor:pointer;font-size:.9rem}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.78rem;border:1px solid}
+.active{color:var(--ok)}.expiring{color:var(--w)}.expired,.none{color:var(--bad)}
+.ban{margin-bottom:12px;border-color:var(--w)}
+.li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--b);cursor:pointer}
+.li:hover{background:rgba(34,211,238,.07)}
+.vid{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000}
+.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.fc{min-height:170px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:1.25rem;padding:20px;white-space:pre-wrap}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:8px;text-align:right;border-bottom:1px solid var(--b);white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
+.stats .card{text-align:center;padding:10px}.stats b{font-size:1.5rem;display:block}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:20;padding:14px}
+#modal.show{display:flex}#modal .card{width:min(520px,100%)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,80px);background:#0d1a2c;border:1px solid var(--c);padding:10px 18px;border-radius:12px;transition:.3s;z-index:30}
+#toast.show{transform:translate(-50%,0)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+</style>
+</head>
+<body>
+<div class="bg"><svg viewBox="0 0 200 260"><path d="M100 20v220"/><path d="M100 60C70 55 40 70 30 110M100 60c30-5 60 10 70 50M100 90C65 88 38 105 30 150M100 90c35-2 62 15 70 60M100 120c-32 0-55 15-62 50M100 120c32 0 55 15 62 50"/><ellipse cx="100" cy="20" rx="18" ry="14"/></svg><div class="scan"></div></div>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ===== الإعدادات: ضع بيانات مشروعك من Supabase > Project Settings > API ===== */
+const SUPABASE_URL='PUT_YOUR_SUPABASE_URL';
+const SUPABASE_KEY='PUT_YOUR_ANON_PUBLIC_KEY';
+const TEACHER='د/ اسم المدرس';
+/* ============================================================================ */
+const sb=SUPABASE_URL.startsWith('PUT_')?null:supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,adminTab=false,sMsg='';
+const A=$('#app');
+
+function toast(m){const t=$('#toast');t.textContent=m;t.className='show';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='',2800)}
+function subDays(p){if(!p||!p.sub_until)return null;return Math.ceil((new Date(p.sub_until+'T23:59:59')-Date.now())/864e5)}
+function subState(p){const d=subDays(p);if(d===null)return'none';if(d<0)return'expired';if(d<=5)return'expiring';return'active'}
+const LBL={active:'نشط',expiring:'قارب على الانتهاء',expired:'منتهي',none:'غير مفعّل'};
+const hasAccess=()=>me&&(me.role==='admin'||['active','expiring'].includes(subState(me)));
+function waNum(p){let d=String(p||'').replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);else if(d.startsWith('0'))d='20'+d.slice(1);return d}
+function embed(u){try{const x=new URL(u);if(x.protocol!=='https:')return'';const h=x.hostname.replace('www.','');
+ if(h==='youtube.com'&&x.searchParams.get('v'))return'https://www.youtube.com/embed/'+encodeURIComponent(x.searchParams.get('v'));
+ if(h==='youtu.be')return'https://www.youtube.com/embed/'+encodeURIComponent(x.pathname.slice(1));
+ return x.href}catch(e){return''}}
+
+/* ---------- المصادقة ---------- */
+function authView(msg,mode){mode=mode||'in';const up=mode==='up';
+ A.innerHTML=`<div class="auth card"><h1 style="font-size:1.6rem">🩻 أكاديمية الأشعة</h1><p class="m" style="margin:6px 0 10px">${esc(msg||'سجّل دخولك للمتابعة')}</p>
+ ${up?'<input id="fn" placeholder="الاسم الكامل"><input id="ph" placeholder="رقم الواتساب" inputmode="tel" dir="ltr">':''}
+ <input id="em" type="email" placeholder="البريد الإلكتروني" dir="ltr"><input id="pw" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" dir="ltr">
+ <button class="btn" style="width:100%" data-act="${up?'signup':'signin'}">${up?'إنشاء حساب':'دخول'}</button>
+ <a class="lnk" data-act="sw" data-m="${up?'in':'up'}">${up?'لدي حساب بالفعل':'حساب جديد'}</a></div>`}
+
+async function boot(){
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session)return authView();
+ const {data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+ if(error||!data){await sb.auth.signOut();return authView('تعذر تحميل الحساب، حاول مرة أخرى')}
+ me=data;
+ sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',me.id).then(()=>{});
+ shell();go(me.role==='admin'?'admin':'home');
+}
+function shell(){
+ A.innerHTML=`<header><b>🩻 أكاديمية الأشعة</b><nav>
+ <button class="nb" data-act="go" data-v="home" id="n-home">الكورسات</button>
+ <button class="nb" data-act="go" data-v="cards" id="n-cards">مراجعة ذكية</button>
+ ${me.role==='admin'?'<button class="nb" data-act="go" data-v="admin" id="n-admin">لوحة التحكم</button>':''}
+ <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>`}
+function go(v,id){
+ document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
+ ({home:home,cards:cardsView,admin:adminView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
+}
+
+/* ---------- الطالب ---------- */
+async function home(){
+ const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
+ const [c,l]=await Promise.all([sb.from('courses').select('*').order('created_at'),sb.from('lessons').select('*').order('position')]);
+ if(c.error||l.error)return m.innerHTML='<p class="m">تعذر تحميل البيانات، تأكد من تشغيل ملف schema.sql</p>';
+ courses=c.data||[];lessons=l.data||[];
+ const st=subState(me),d=subDays(me);
+ let ban='';
+ if(me.role!=='admin'){
+  if(st==='none')ban='اشتراكك غير مفعّل بعد. الدروس المجانية متاحة، وللتفعيل تواصل مع المدرس.';
+  else if(st==='expired')ban='انتهى اشتراكك. جدّده للوصول إلى كل المحتوى.';
+  else if(st==='expiring')ban='ينتهي اشتراكك خلال '+d+' يوم، جدّده قريبًا.';}
+ m.innerHTML=(ban?`<div class="card ban">${esc(ban)}</div>`:'')+'<input id="q" placeholder="🔍 بحث ذكي في الكورسات والدروس...">'+'<div id="res"></div>';
+ draw('');
+}
+function draw(q){
+ const n=norm(q),r=$('#res');if(!r)return;
+ const cs=courses.filter(c=>!n||norm(c.title+' '+c.description).includes(n));
+ const ls=n?lessons.filter(l=>norm(l.title).includes(n)):[];
+ r.innerHTML=(cs.length?'<div class="grid">'+cs.map(c=>`<div class="card cc" data-act="course" data-id="${esc(c.id)}"><div class="im" ${/^https:\/\//.test(c.cover_url||'')?`style="background-image:url('${esc(encodeURI(c.cover_url))}')"`:''}>${c.cover_url?'':'🩻'}</div><div class="bd"><b>${esc(c.title)}</b><p class="m">${esc(c.description)}</p></div></div>`).join('')+'</div>':'<p class="m" style="margin-top:14px">لا توجد كورسات مطابقة.</p>')
+ +(ls.length?'<h2 style="margin-top:18px">الدروس</h2><div class="card">'+ls.map(l=>`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${esc(l.title)}</span></div>`).join('')+'</div>':'');
+}
+function courseView(id){
+ const c=courses.find(x=>x.id===id);if(!c)return go('home');
+ const ls=lessons.filter(l=>l.course_id===id);
+ $('#main').innerHTML=`<button class="nb" data-act="go" data-v="home">← رجوع</button><h2 style="margin-top:10px">${esc(c.title)}</h2><p class="m" style="margin-bottom:12px">${esc(c.description)}</p><div class="card">`+
+ (ls.length?ls.map((l,i)=>{const ok=hasAccess()||l.is_free;return`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i+1}. ${esc(l.title)}</span><span class="m">${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`}).join(''):'<p class="m">لا توجد دروس بعد.</p>')+'</div>';
+}
+async function lessonView(id){
+ const l=lessons.find(x=>x.id===id);if(!l)return go('home');
+ const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
+ const {data}=await sb.from('lesson_media').select('*').eq('lesson_id',id).maybeSingle();
+ const back=`<button class="nb" data-act="course" data-id="${esc(l.course_id)}">← رجوع للكورس</button><h2 style="margin-top:10px">${esc(l.title)}</h2>`;
+ if(!data)return m.innerHTML=back+'<div class="card ban">🔒 هذا الدرس للمشتركين فقط. تواصل مع المدرس لتفعيل اشتراكك.</div>';
+ const e=embed(data.video_url);
+ m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'');
+}
+
+/* مراجعة ذكية: نظام ليتنر للتكرار المتباعد (يعمل داخل المتصفح بدون API) */
+const BOX=[0,1,3,7,14],lk=()=>'lt_'+me.id;
+const lt=()=>{try{return JSON.parse(localStorage.getItem(lk())||'{}')}catch(e){return{}}};
+async function cardsView(){
+ const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
+ const {data,error}=await sb.from('flashcards').select('*');
+ cards=error?[]:(data||[]);
+ if(!cards.length)return m.innerHTML='<div class="card">المراجعة الذكية متاحة للمشتركين عند توفر بطاقات مراجعة.</div>';
+ nextCard();
+}
+function nextCard(){
+ const s=lt(),now=Date.now(),due=cards.filter(c=>!s[c.id]||s[c.id].d<=now);
+ const m=$('#main');
+ if(!due.length)return m.innerHTML=`<div class="card">🎉 أنهيت مراجعة اليوم! ستظهر البطاقات التالية في موعدها المناسب.<p class="m">${cards.length} بطاقة في مجموعتك.</p></div>`;
+ cur=due[Math.floor(Math.random()*due.length)];
+ m.innerHTML=`<p class="m">المتبقي اليوم: ${due.length}</p><div class="card fc" id="fc">${esc(cur.front)}</div><div class="row" id="fb" style="margin-top:10px"><button class="btn" data-act="show">إظهار الإجابة</button></div>`;
+}
+function rate(ok){
+ const s=lt(),b=ok?Math.min(((s[cur.id]||{b:0}).b)+1,BOX.length-1):0;
+ s[cur.id]={b:b,d:Date.now()+BOX[b]*864e5};
+ try{localStorage.setItem(lk(),JSON.stringify(s))}catch(e){}
+ nextCard();
+}
+
+/* ---------- الأدمن ---------- */
+function template(p){
+ const st=subState(p),d=subDays(p),n=p.full_name||'عزيزي الطالب';
+ const inactive=p.last_seen&&(Date.now()-new Date(p.last_seen))>14*864e5;
+ if(st==='none')return`أهلاً ${n} 👋\nتم تسجيلك في أكاديمية الأشعة ولم يتم تفعيل اشتراكك بعد. للتفعيل برجاء التواصل معي.\n${TEACHER}`;
+ if(st==='expiring')return`أهلاً ${n} 👋\nاشتراكك في أكاديمية الأشعة ينتهي خلال ${d} يوم (${p.sub_until}). يسعدني تجديده لتستمر في التعلم.\n${TEACHER}`;
+ if(st==='expired')return`أهلاً ${n} 👋\nانتهى اشتراكك في أكاديمية الأشعة بتاريخ ${p.sub_until}. أتمنى عودتك، تواصل معي للتجديد.\n${TEACHER}`;
+ if(inactive)return`أهلاً ${n} 👋\nلاحظت غيابك عن المنصة فترة. هل تحتاج مساعدة في المذاكرة؟ أنا موجود.\n${TEACHER}`;
+ return`أهلاً ${n} 👋\nتم تفعيل اشتراكك حتى ${p.sub_until}. بالتوفيق في دراستك!\n${TEACHER}`;
+}
+async function adminView(){
+ if(me.role!=='admin')return go('home');
+ const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
+ const [s,c]=await Promise.all([sb.from('profiles').select('*').eq('role','student').order('created_at',{ascending:false}),sb.from('courses').select('id,title').order('created_at')]);
+ students=s.data||[];courses=c.data||[];
+ const cnt={active:0,expiring:0,expired:0,none:0};students.forEach(p=>cnt[subState(p)]++);
+ const opts=courses.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('');
+ m.innerHTML=`<div class="stats"><div class="card"><b>${students.length}</b>الطلاب</div><div class="card"><b class="active">${cnt.active}</b>نشط</div><div class="card"><b class="expiring">${cnt.expiring}</b>قارب</div><div class="card"><b class="expired">${cnt.expired}</b>منتهي</div><div class="card"><b class="none">${cnt.none}</b>غير مفعّل</div></div>
+ <div class="card"><h2>الطلاب</h2><div class="row"><input id="sq" placeholder="بحث بالاسم أو الهاتف أو الإيميل"><select id="sf"><option value="">كل الحالات</option><option value="active">نشط</option><option value="expiring">قارب على الانتهاء</option><option value="expired">منتهي</option><option value="none">غير مفعّل</option></select></div><div class="tw" id="st"></div></div>
+ <div class="card" style="margin-top:14px"><h2>إضافة محتوى</h2>
+ <b>كورس جديد</b><input id="ct" placeholder="عنوان الكورس"><input id="cd" placeholder="وصف مختصر"><input id="cu" placeholder="رابط صورة الغلاف (Cloudflare) اختياري" dir="ltr"><button class="btn sm" data-act="addc">حفظ الكورس</button><hr style="border-color:var(--b);margin:12px 0">
+ <b>درس جديد</b><select id="lc">${opts}</select><input id="lt" placeholder="عنوان الدرس"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr"><textarea id="ln" rows="3" placeholder="ملاحظات الدرس"></textarea><label class="m"><input type="checkbox" id="lf" style="width:auto"> درس مجاني</label><br><button class="btn sm" data-act="addl">حفظ الدرس</button><hr style="border-color:var(--b);margin:12px 0">
+ <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>`;
+ drawStudents();
+}
+function drawStudents(){
+ const q=norm(($('#sq')||{}).value),f=($('#sf')||{}).value;
+ const L=students.filter(p=>(!f||subState(p)===f)&&(!q||norm((p.full_name||'')+(p.phone||'')+(p.email||'')).includes(q)));
+ $('#st').innerHTML=L.length?`<table><tr><th>الطالب</th><th>الحالة</th><th>ينتهي</th><th>تفعيل</th><th>مراسلة</th></tr>`+L.map(p=>{const s=subState(p);return`<tr><td>${esc(p.full_name||'-')}<br><span class="m">${esc(p.phone||'')}</span></td><td><span class="chip ${s}">${LBL[s]}</span></td><td>${esc(p.sub_until||'-')}</td><td>${[1,3,6,12].map(k=>`<button class="btn sm" data-act="sub" data-id="${esc(p.id)}" data-k="${k}">+${k}ش</button>`).join('')}<button class="btn sm gh" data-act="unsub" data-id="${esc(p.id)}">إيقاف</button></td><td><button class="btn sm" data-act="msg" data-id="${esc(p.id)}">✉ رسالة</button></td></tr>`}).join('')+'</table>':'<p class="m">لا يوجد طلاب.</p>';
+}
+async function setSub(id,date){
+ const {error}=await sb.from('profiles').update({sub_until:date}).eq('id',id);
+ if(error)return toast('فشل التحديث: '+error.message);
+ const p=students.find(x=>x.id===id);if(p)p.sub_until=date;toast('تم التحديث ✅');adminView();
+}
+function openMsg(id){
+ const p=students.find(x=>x.id===id);if(!p)return;cur=p;
+ $('#modal').innerHTML=`<div class="card"><h2>مراسلة ${esc(p.full_name||'')}</h2><p class="m">نص مقترح حسب حالة الطالب، يمكنك تعديله:</p><textarea id="mt" rows="6"></textarea><div class="row"><button class="btn" data-act="wa">واتساب</button><button class="btn" data-act="gm">جيميل</button><button class="btn gh" data-act="cm">إغلاق</button></div></div>`;
+ $('#mt').value=template(p);$('#modal').className='show';
+}
+async function sendMsg(ch){
+ const t=$('#mt').value.trim();if(!t)return toast('اكتب نص الرسالة');
+ const p=cur;
+ if(ch==='wa'){const n=waNum(p.phone);if(!n)return toast('لا يوجد رقم هاتف');window.open('https://wa.me/'+n+'?text='+encodeURIComponent(t),'_blank','noopener')}
+ else{if(!p.email)return toast('لا يوجد بريد');window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(p.email)+'&su='+encodeURIComponent('أكاديمية الأشعة')+'&body='+encodeURIComponent(t),'_blank','noopener')}
+ await sb.from('messages_log').insert({student_id:p.id,channel:ch,body:t});
+ $('#modal').className='';
+}
+async function ins(table,row,msg){
+ const {error}=await sb.from(table).insert(row);
+ if(error){toast('خطأ: '+error.message);return null}toast(msg);return true;
+}
+
+/* ---------- الأحداث ---------- */
+const val=id=>($('#'+id).value||'').trim();
+const act={
+ sw:e=>authView('',e.dataset.m),
+ async signin(){const r=await sb.auth.signInWithPassword({email:val('em'),password:$('#pw').value});if(r.error)return toast('بيانات الدخول غير صحيحة');boot()},
+ async signup(){
+  if(!val('fn')||!val('ph')||!val('em')||$('#pw').value.length<6)return toast('أكمل البيانات وكلمة مرور 6 أحرف على الأقل');
+  const r=await sb.auth.signUp({email:val('em'),password:$('#pw').value,options:{data:{full_name:val('fn'),phone:val('ph')}}});
+  if(r.error)return toast(r.error.message);
+  if(r.data.session)boot();else authView('تم إنشاء الحساب، تحقق من بريدك لتأكيده ثم سجّل الدخول')},
+ async out(){await sb.auth.signOut();me=null;authView()},
+ go:e=>go(e.dataset.v),course:e=>go('course',e.dataset.id),lesson:e=>go('lesson',e.dataset.id),
+ show(){$('#fc').textContent=cur.back;$('#fb').innerHTML='<button class="btn" data-act="yes">عرفتها ✅</button><button class="btn gh" data-act="no">لم أعرفها ❌</button>'},
+ yes:()=>rate(true),no:()=>rate(false),
+ sub(e){const p=students.find(x=>x.id===e.dataset.id);const t=new Date();t.setHours(0,0,0,0);
+  let base=t;if(p.sub_until){const c=new Date(p.sub_until+'T00:00:00');if(c>t)base=c}
+  const d=new Date(base);d.setDate(1);d.setMonth(d.getMonth()+Number(e.dataset.k));
+  const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(base.getDate(),dim));
+  setSub(p.id,ymd(d))},
+ unsub:e=>confirm('إيقاف اشتراك هذا الطالب؟')&&setSub(e.dataset.id,null),
+ msg:e=>openMsg(e.dataset.id),wa:()=>sendMsg('wa'),gm:()=>sendMsg('gmail'),cm:()=>{$('#modal').className=''},
+ async addc(){if(!val('ct'))return toast('اكتب عنوان الكورس');const u=val('cu');if(u&&!/^https:\/\//.test(u))return toast('رابط الصورة يجب أن يبدأ بـ https://');
+  if(await ins('courses',{title:val('ct'),description:val('cd'),cover_url:u||null},'تم حفظ الكورس ✅'))adminView()},
+ async addl(){if(!val('lc')||!val('lt'))return toast('اختر الكورس واكتب العنوان');if(val('lv')&&!embed(val('lv')))return toast('رابط الفيديو غير صالح (https فقط)');
+  const {data,error}=await sb.from('lessons').insert({course_id:val('lc'),title:val('lt'),is_free:$('#lf').checked,position:Date.now()%1e9}).select('id').single();
+  if(error)return toast('خطأ: '+error.message);
+  if(await ins('lesson_media',{lesson_id:data.id,video_url:val('lv')||null,notes:val('ln')||null},'تم حفظ الدرس ✅'))adminView()},
+ async addf(){if(!val('fcid')||!val('ff')||!val('fb2'))return toast('أكمل البيانات');
+  if(await ins('flashcards',{course_id:val('fcid'),front:val('ff'),back:val('fb2')},'تم حفظ البطاقة ✅')){$('#ff').value='';$('#fb2').value=''}}
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||!act[el.dataset.act])return;
+ Promise.resolve(act[el.dataset.act](el)).catch(x=>toast('حدث خطأ: '+(x&&x.message||x)))});
+document.addEventListener('input',e=>{if(e.target.id==='q')draw(e.target.value);if(e.target.id==='sq')drawStudents()});
+document.addEventListener('change',e=>{if(e.target.id==='sf')drawStudents()});
+if(SUPABASE_URL.startsWith('PUT_'))authView('عدّل SUPABASE_URL و SUPABASE_KEY داخل index.html');else boot();
+</script>
+</body>
+</html>
