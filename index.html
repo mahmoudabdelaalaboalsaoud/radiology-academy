@@ -191,7 +191,8 @@ function template(p){
 async function adminView(){
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [s,c]=await Promise.all([sb.from('profiles').select('*').eq('role','student').order('created_at',{ascending:false}),sb.from('courses').select('id,title').order('created_at')]);
+ const [s,c,a]=await Promise.all([sb.from('profiles').select('*').eq('role','student').order('created_at',{ascending:false}),sb.from('courses').select('id,title').order('created_at'),sb.from('profiles').select('id,full_name,email').eq('role','admin').order('created_at')]);
+ const admins=a.data||[];
  students=s.data||[];courses=c.data||[];
  const cnt={active:0,expiring:0,expired:0,none:0};students.forEach(p=>cnt[subState(p)]++);
  const opts=courses.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('');
@@ -200,7 +201,10 @@ async function adminView(){
  <div class="card" style="margin-top:14px"><h2>إضافة محتوى</h2>
  <b>كورس جديد</b><input id="ct" placeholder="عنوان الكورس"><input id="cd" placeholder="وصف مختصر"><input id="cu" placeholder="رابط صورة الغلاف (Cloudflare) اختياري" dir="ltr"><button class="btn sm" data-act="addc">حفظ الكورس</button><hr style="border-color:var(--b);margin:12px 0">
  <b>درس جديد</b><select id="lc">${opts}</select><input id="lt" placeholder="عنوان الدرس"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr"><textarea id="ln" rows="3" placeholder="ملاحظات الدرس"></textarea><label class="m"><input type="checkbox" id="lf" style="width:auto"> درس مجاني</label><br><button class="btn sm" data-act="addl">حفظ الدرس</button><hr style="border-color:var(--b);margin:12px 0">
- <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>`;
+ <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>
+ <div class="card" style="margin-top:14px"><h2>المشرفون</h2><p class="m">اطلب من الشخص تسجيل حساب جديد في الموقع أولاً، ثم اكتب بريده هنا.</p>
+ <div class="row"><input id="ae" type="email" placeholder="بريد المشرف الجديد" dir="ltr"><button class="btn sm" data-act="addadm">إضافة مشرف</button></div>
+ <div class="tw"><table>${admins.map(x=>`<tr><td>${esc(x.full_name||'-')}<br><span class="m" dir="ltr">${esc(x.email||'')}</span></td><td>${x.id===me.id?'<span class="m">أنت</span>':`<button class="btn sm gh" data-act="rmadm" data-id="${esc(x.id)}">إزالة</button>`}</td></tr>`).join('')}</table></div></div>`;
  drawStudents();
 }
 function drawStudents(){
@@ -258,6 +262,16 @@ const act={
   const {data,error}=await sb.from('lessons').insert({course_id:val('lc'),title:val('lt'),is_free:$('#lf').checked,position:Date.now()%1e9}).select('id').single();
   if(error)return toast('خطأ: '+error.message);
   if(await ins('lesson_media',{lesson_id:data.id,video_url:val('lv')||null,notes:val('ln')||null},'تم حفظ الدرس ✅'))adminView()},
+ async addadm(){const em=val('ae').toLowerCase();if(!em)return toast('اكتب بريد المشرف');
+  const {data,error}=await sb.from('profiles').select('id,role').eq('email',em).maybeSingle();
+  if(error)return toast('خطأ: '+error.message);
+  if(!data)return toast('لا يوجد حساب بهذا البريد، اطلب منه التسجيل أولاً');
+  if(data.role==='admin')return toast('هذا الشخص مشرف بالفعل');
+  const r=await sb.from('profiles').update({role:'admin'}).eq('id',data.id);
+  if(r.error)return toast('فشل: '+r.error.message);toast('تمت إضافة المشرف ✅');adminView()},
+ async rmadm(e){if(e.dataset.id===me.id)return;if(!confirm('إزالة صلاحية هذا المشرف؟'))return;
+  const r=await sb.from('profiles').update({role:'student'}).eq('id',e.dataset.id);
+  if(r.error)return toast('فشل: '+r.error.message);toast('تمت الإزالة');adminView()},
  async addf(){if(!val('fcid')||!val('ff')||!val('fb2'))return toast('أكمل البيانات');
   if(await ins('flashcards',{course_id:val('fcid'),front:val('ff'),back:val('fb2')},'تم حفظ البطاقة ✅')){$('#ff').value='';$('#fb2').value=''}}
 };
