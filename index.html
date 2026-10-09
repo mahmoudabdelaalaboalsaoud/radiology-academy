@@ -94,6 +94,7 @@ function authView(msg,mode){mode=mode||'in';const up=mode==='up';
  ${up?'<input id="fn" placeholder="الاسم الكامل"><input id="ph" placeholder="رقم الواتساب" inputmode="tel" dir="ltr">':''}
  <input id="em" type="email" placeholder="البريد الإلكتروني" dir="ltr"><input id="pw" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" dir="ltr">
  <button class="btn" style="width:100%" data-act="${up?'signup':'signin'}">${up?'إنشاء حساب':'دخول'}</button>
+ <button class="btn gh" style="width:100%;margin-top:8px" data-act="google">الدخول بحساب Google</button>
  <a class="lnk" data-act="sw" data-m="${up?'in':'up'}">${up?'لدي حساب بالفعل':'حساب جديد'}</a></div>`}
 
 async function boot(){
@@ -245,6 +246,7 @@ const act={
   const r=await sb.auth.signUp({email:val('em'),password:$('#pw').value,options:{data:{full_name:val('fn'),phone:val('ph')}}});
   if(r.error)return toast(r.error.message);
   if(r.data.session)boot();else authView('تم إنشاء الحساب، تحقق من بريدك لتأكيده ثم سجّل الدخول')},
+ async google(){const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});if(r.error)toast(r.error.message)},
  async out(){await sb.auth.signOut();me=null;authView()},
  go:e=>go(e.dataset.v),course:e=>go('course',e.dataset.id),lesson:e=>go('lesson',e.dataset.id),
  show(){$('#fc').textContent=cur.back;$('#fb').innerHTML='<button class="btn" data-act="yes">عرفتها ✅</button><button class="btn gh" data-act="no">لم أعرفها ❌</button>'},
