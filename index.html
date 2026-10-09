@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>أكاديمية الأشعة</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#050b14">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="أكاديمية الأشعة">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
 :root{--bg:#050b14;--c:#22d3ee;--c2:#6366f1;--t:#e6f1ff;--m:#8aa0b8;--card:rgba(13,26,44,.82);--b:rgba(34,211,238,.2);--ok:#34d399;--w:#fbbf24;--bad:#f87171}
 *{box-sizing:border-box;margin:0}
@@ -59,6 +67,13 @@ a.btn{display:inline-block;text-decoration:none;text-align:center}
 .plan{text-align:center}.plan .price{font-size:1.6rem;font-weight:700;color:var(--c);margin:6px 0}.plan.sel{border-color:var(--ok)}
 .fab{position:fixed;bottom:18px;inset-inline-start:18px;width:56px;height:56px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:15}
 .fab svg{width:30px;height:30px;fill:#fff}
+.inst{display:none!important}body.canin .inst{display:inline-block!important}
+body.prot{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.prot input,body.prot textarea{-webkit-user-select:text;user-select:text}
+#wm{position:fixed;inset:0;z-index:25;pointer-events:none;background-repeat:repeat}
+#blk{position:fixed;inset:0;background:#050b14;z-index:40;display:none;align-items:center;justify-content:center;font-size:3rem}
+body.hid #blk{display:flex}
+@media print{body.prot{display:none!important}}
 </style>
 </head>
 <body>
@@ -66,6 +81,7 @@ a.btn{display:inline-block;text-decoration:none;text-align:center}
 <div id="app"></div>
 <div id="modal"></div>
 <div id="toast"></div>
+<div id="blk">🔒</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -93,13 +109,40 @@ function embed(u){try{const x=new URL(u);if(x.protocol!=='https:')return'';const
  if(h==='youtu.be')return'https://www.youtube.com/embed/'+encodeURIComponent(x.pathname.slice(1));
  return x.href}catch(e){return''}}
 
+/* ---------- تثبيت التطبيق (PWA) ---------- */
+let dip=null;
+const stand=()=>(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!stand())document.body.classList.add('canin')});
+window.addEventListener('appinstalled',()=>{dip=null;document.body.classList.remove('canin');toast('تم تثبيت التطبيق ✅')});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!stand())document.body.classList.add('canin');
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+/* ---------- حماية المحتوى للأعضاء ---------- */
+const isP=()=>document.body.classList.contains('prot'),isIn=t=>/^(INPUT|TEXTAREA)$/.test((t&&t.tagName)||'');
+['copy','cut','contextmenu','dragstart'].forEach(ev=>document.addEventListener(ev,e=>{if(isP()&&!isIn(e.target))e.preventDefault()}));
+document.addEventListener('selectstart',e=>{if(isP()&&!isIn(e.target))e.preventDefault()});
+document.addEventListener('keydown',e=>{if(!isP())return;const k=(e.key||'').toLowerCase();
+ if(k==='printscreen'){try{navigator.clipboard.writeText(' ')}catch(x){}toast('التصوير غير مسموح')}
+ if((e.ctrlKey||e.metaKey)&&['c','x','s','p','u','a'].includes(k)&&!isIn(e.target))e.preventDefault()});
+document.addEventListener('visibilitychange',()=>document.body.classList.toggle('hid',document.hidden&&isP()));
+function setWM(){
+ const o=$('#wm');if(o)o.remove();
+ if(!me||me.role==='admin')return;
+ const t=(me.full_name||'')+' • '+(me.phone||me.email||'');
+ const x=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><text x="160" y="100" fill="#ffffff" fill-opacity="0.13" font-family="Arial,sans-serif" font-size="15" text-anchor="middle" transform="rotate(-25 160 100)">'+x(t)+'</text></svg>';
+ const w=document.createElement('div');w.id='wm';w.style.backgroundImage='url("data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'")';document.body.appendChild(w);
+}
+
 /* ---------- المصادقة ---------- */
 function authView(msg,mode){mode=mode||'in';const up=mode==='up';
+ document.body.classList.remove('prot','hid');const w0=$('#wm');if(w0)w0.remove();
  A.innerHTML=`<div class="auth card"><h1 style="font-size:1.6rem">🩻 أكاديمية الأشعة</h1><p class="m" style="margin:6px 0 10px">${esc(msg||'سجّل دخولك للمتابعة')}</p>
  ${up?'<input id="fn" placeholder="الاسم الكامل"><input id="ph" placeholder="رقم الواتساب" inputmode="tel" dir="ltr">':''}
  <input id="em" type="email" placeholder="البريد الإلكتروني" dir="ltr"><input id="pw" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" dir="ltr">
  <button class="btn" style="width:100%" data-act="${up?'signup':'signin'}">${up?'إنشاء حساب':'دخول'}</button>
  <button class="btn gh" style="width:100%;margin-top:8px" data-act="google">الدخول بحساب Google</button>
+ <button class="btn gh inst" style="width:100%;margin-top:8px" data-act="install">📲 تثبيت التطبيق على الشاشة الرئيسية</button>
  <a class="lnk" data-act="sw" data-m="${up?'in':'up'}">${up?'لدي حساب بالفعل':'حساب جديد'}</a></div>`}
 
 async function loadSettings(){
@@ -118,6 +161,7 @@ async function boot(){
  if(error||!data){await sb.auth.signOut();return authView('تعذر تحميل الحساب، حاول مرة أخرى')}
  me=data;
  await loadSettings();
+ document.body.classList.toggle('prot',me.role!=='admin');setWM();
  sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',me.id).then(()=>{});
  if(me.role!=='admin'&&!String(me.phone||'').trim())return phoneView();
  shell();go(me.role==='admin'?'members':'home');
@@ -131,6 +175,7 @@ function shell(){
  <button class="nb" data-act="go" data-v="home" id="n-home">الكورسات</button>
  <button class="nb" data-act="go" data-v="cards" id="n-cards">مراجعة ذكية</button>
  ${adm?'<button class="nb" data-act="go" data-v="content" id="n-content">المحتوى</button><button class="nb" data-act="go" data-v="members" id="n-members">الأعضاء</button><button class="nb" data-act="go" data-v="site" id="n-site">الموقع</button>':'<button class="nb" data-act="go" data-v="plans" id="n-plans">الاشتراك</button>'}
+ <button class="nb inst" data-act="install">📲 تثبيت</button>
  <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
 function go(v,id){
  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
@@ -342,6 +387,7 @@ const act={
   if(r.error)return toast(r.error.message);
   if(r.data.session)boot();else authView('تم إنشاء الحساب، تحقق من بريدك لتأكيده ثم سجّل الدخول')},
  async google(){const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});if(r.error)toast(r.error.message)},
+ async install(){if(dip){dip.prompt();const r=await dip.userChoice;dip=null;if(r.outcome==='accepted')document.body.classList.remove('canin')}else toast('اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»')},
  async out(){await sb.auth.signOut();me=null;authView()},
  go:e=>go(e.dataset.v),course:e=>go('course',e.dataset.id),lesson:e=>go('lesson',e.dataset.id),
  show(){$('#fc').textContent=cur.back;$('#fb').innerHTML='<button class="btn" data-act="yes">عرفتها ✅</button><button class="btn gh" data-act="no">لم أعرفها ❌</button>'},
