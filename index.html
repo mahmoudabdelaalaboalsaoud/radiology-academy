@@ -74,6 +74,30 @@ body.prot input,body.prot textarea{-webkit-user-select:text;user-select:text}
 #blk{position:fixed;inset:0;background:#050b14;z-index:40;display:none;align-items:center;justify-content:center;font-size:3rem}
 body.hid #blk{display:flex}
 @media print{body.prot{display:none!important}}
+#ipop{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;justify-content:center;padding:14px 14px calc(14px + env(safe-area-inset-bottom));pointer-events:none;transform:translateY(130%);transition:transform .55s cubic-bezier(.2,.9,.3,1.15)}
+#ipop.show{transform:none}
+#ipop .ic{pointer-events:auto;position:relative;overflow:hidden;width:min(420px,100%);text-align:center;padding:22px 18px 16px;border-radius:26px;border:1px solid var(--c);background:linear-gradient(160deg,rgba(20,44,74,.98),rgba(7,16,30,.98));box-shadow:0 -8px 50px rgba(34,211,238,.3),0 20px 50px rgba(0,0,0,.65)}
+#ipop .ic::before{content:'';position:absolute;inset:-30% -20% auto;height:90%;background:radial-gradient(circle,rgba(99,102,241,.4),transparent 62%);pointer-events:none}
+#ipop .ic>*{position:relative}
+#ipop .x{position:absolute;top:10px;inset-inline-end:12px;width:30px;height:30px;border-radius:50%;border:1px solid var(--b);background:rgba(255,255,255,.06);color:var(--m);cursor:pointer;font-size:.9rem;z-index:2}
+#ipop .lg{position:relative;width:88px;height:88px;margin:0 auto 12px;animation:fl 3s ease-in-out infinite}
+#ipop .lg img{position:relative;width:88px;height:88px;border-radius:22px;box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(34,211,238,.55)}
+#ipop .lg i{position:absolute;inset:0;border-radius:22px;border:2px solid var(--c);animation:ring 2s ease-out infinite}
+@keyframes ring{from{transform:scale(1);opacity:.85}to{transform:scale(1.7);opacity:0}}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+#ipop h3{font-size:1.3rem;margin:2px 0 4px}
+#ipop p{color:var(--m);font-size:.9rem;line-height:1.6}
+#ipop .ft{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 6px}
+#ipop .ft span{font-size:.8rem;padding:5px 11px;border-radius:99px;border:1px solid var(--b);background:rgba(34,211,238,.09)}
+#ipop .go{position:relative;overflow:hidden;width:100%;padding:14px;font-size:1.05rem;margin-top:10px;box-shadow:0 8px 24px rgba(34,211,238,.35)}
+#ipop .go::after{content:'';position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg);animation:sh 2.6s infinite}
+@keyframes sh{to{left:130%}}
+#ipop .st{list-style:none;padding:0;margin:12px 0 4px;text-align:right}
+#ipop .st li{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--b);font-size:.92rem}
+#ipop .st b{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--c2),var(--c));color:#04101c;display:flex;align-items:center;justify-content:center}
+#ipop .st em{font-style:normal;background:rgba(34,211,238,.18);border-radius:6px;padding:0 6px}
+.chh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+h3.sh{margin:14px 0 8px;font-size:1rem;color:var(--c)}
 </style>
 </head>
 <body>
@@ -82,6 +106,7 @@ body.hid #blk{display:flex}
 <div id="modal"></div>
 <div id="toast"></div>
 <div id="blk">🔒</div>
+<div id="ipop"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -95,7 +120,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReq=null,settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
+let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReqs=[],chapters=[],myEnr=new Set(),enr=[],settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
 const A=$('#app');
 
 function toast(m){const t=$('#toast');t.textContent=m;t.className='show';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='',2800)}
@@ -111,10 +136,26 @@ function embed(u){try{const x=new URL(u);if(x.protocol!=='https:')return'';const
 
 /* ---------- تثبيت التطبيق (PWA) ---------- */
 let dip=null;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 const stand=()=>(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!stand())document.body.classList.add('canin')});
-window.addEventListener('appinstalled',()=>{dip=null;document.body.classList.remove('canin');toast('تم تثبيت التطبيق ✅')});
-if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!stand())document.body.classList.add('canin');
+const POPK='ra_ipop';
+function popSeen(){try{return Date.now()-Number(localStorage.getItem(POPK)||0)<3*864e5}catch(e){return false}}
+function popHide(snooze){const p=$('#ipop');if(p)p.classList.remove('show');if(snooze){try{localStorage.setItem(POPK,String(Date.now()))}catch(e){}}}
+function popHTML(){
+ const logo='<div class="lg"><i></i><img src="/icon-192.png" alt=""></div>';
+ const x='<button class="x" data-act="popclose" aria-label="إغلاق">✕</button>';
+ if(isIOS)return`<div class="ic">${x}${logo}<h3>ثبّت التطبيق على جهازك</h3><p>ثلاث خطوات سريعة وتصبح الأكاديمية على شاشتك الرئيسية</p><ol class="st"><li><b>1</b><span>اضغط زر المشاركة <em>⬆️</em> أسفل المتصفح</span></li><li><b>2</b><span>اختر «إضافة إلى الشاشة الرئيسية»</span></li><li><b>3</b><span>اضغط «إضافة» في أعلى الشاشة</span></li></ol><button class="btn go" data-act="popclose">فهمت 👍</button></div>`;
+ return`<div class="ic">${x}${logo}<h3>ثبّت أكاديمية الأشعة</h3><p>افتح منصتك بلمسة واحدة من الشاشة الرئيسية، بدون متصفح وبسرعة أكبر</p><div class="ft"><span>⚡ فتح فوري</span><span>📱 ملء الشاشة</span><span>🎓 دراستك معك دائماً</span></div><button class="btn go" data-act="doinst">📲 ثبّت التطبيق الآن</button><a class="lnk" data-act="popclose">ليس الآن</a></div>`}
+function popShow(force){
+ if(stand()||(!isIOS&&!dip))return;
+ if(!force&&popSeen())return;
+ const p=$('#ipop');if(!p)return;
+ p.innerHTML=popHTML();
+ requestAnimationFrame(()=>requestAnimationFrame(()=>p.classList.add('show')));
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!stand()){document.body.classList.add('canin');setTimeout(()=>popShow(false),2500)}});
+window.addEventListener('appinstalled',()=>{dip=null;popHide(false);document.body.classList.remove('canin');toast('تم تثبيت التطبيق ✅')});
+if(isIOS&&!stand()){document.body.classList.add('canin');setTimeout(()=>popShow(false),3500)}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
 /* ---------- حماية المحتوى للأعضاء ---------- */
@@ -125,13 +166,26 @@ document.addEventListener('keydown',e=>{if(!isP())return;const k=(e.key||'').toL
  if(k==='printscreen'){try{navigator.clipboard.writeText(' ')}catch(x){}toast('التصوير غير مسموح')}
  if((e.ctrlKey||e.metaKey)&&['c','x','s','p','u','a'].includes(k)&&!isIn(e.target))e.preventDefault()});
 document.addEventListener('visibilitychange',()=>document.body.classList.toggle('hid',document.hidden&&isP()));
+function wmBg(t,op){
+ const x=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><text x="160" y="100" fill="#ffffff" fill-opacity="'+op+'" font-family="Arial,sans-serif" font-size="15" text-anchor="middle" transform="rotate(-25 160 100)">'+x(t)+'</text></svg>';
+ return 'url("data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'")';
+}
+function wmParts(u,c){const a=[];if(c.text)a.push(c.text);if(c.name&&u.full_name)a.push(u.full_name);if(c.phone&&u.phone)a.push(u.phone);if(c.email&&u.email)a.push(u.email);return a.join(' • ')}
+function wmCfg(){return{on:settings.wm_enabled!==false,name:settings.wm_name!==false,phone:settings.wm_phone!==false,email:settings.wm_email===true,text:settings.wm_text||'',op:Math.min(.5,Math.max(.04,Number(settings.wm_opacity)||.13))}}
 function setWM(){
  const o=$('#wm');if(o)o.remove();
  if(!me||me.role==='admin')return;
- const t=(me.full_name||'')+' • '+(me.phone||me.email||'');
- const x=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
- const svg='<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><text x="160" y="100" fill="#ffffff" fill-opacity="0.13" font-family="Arial,sans-serif" font-size="15" text-anchor="middle" transform="rotate(-25 160 100)">'+x(t)+'</text></svg>';
- const w=document.createElement('div');w.id='wm';w.style.backgroundImage='url("data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'")';document.body.appendChild(w);
+ const c=wmCfg();if(!c.on)return;
+ const t=wmParts(me,c);if(!t)return;
+ const w=document.createElement('div');w.id='wm';w.style.backgroundImage=wmBg(t,c.op);document.body.appendChild(w);
+}
+function wmPrev(){
+ const b=$('#wmprev');if(!b||!$('#w_on'))return;
+ const c={on:$('#w_on').checked,name:$('#w_name').checked,phone:$('#w_phone').checked,email:$('#w_email').checked,text:($('#w_text').value||'').trim(),op:Number($('#w_op').value)/100};
+ $('#w_ov').textContent=Math.round(c.op*100)+'%';
+ const t=wmParts({full_name:'اسم الطالب',phone:'01000000000',email:'student@mail.com'},c);
+ b.style.backgroundImage=(c.on&&t)?wmBg(t,c.op):'none';
 }
 
 /* ---------- المصادقة ---------- */
@@ -168,7 +222,13 @@ async function boot(){
 }
 const WAI='<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
 function waLink(t){const n=waNum(settings.whatsapp);return n?'https://wa.me/'+n+'?text='+encodeURIComponent(t):''}
-function waMsg(){return 'مرحباً، أنا '+(me.full_name||'')+' ('+(me.email||'')+')'+(myReq?' واخترت '+myReq.plan_title+' بسعر '+Number(myReq.price).toLocaleString('en-US')+'. أرغب في تفعيل اشتراكي.':' وأرغب في الاشتراك في الأكاديمية.')}
+function waMsg(){
+ const base='مرحباً، أنا '+(me.full_name||'')+' ('+(me.email||'')+')';
+ if(!myReqs.length)return base+' وأرغب في الاشتراك في الأكاديمية.';
+ const tot=myReqs.reduce((a,r)=>a+Number(r.price||0),0);
+ return base+' واخترت: '+myReqs.map(r=>r.plan_title+' ('+Number(r.price).toLocaleString('en-US')+')').join('، ')+' — الإجمالي '+tot.toLocaleString('en-US')+'. أرغب في تفعيل اشتراكي.';
+}
+
 function shell(){
  const adm=me.role==='admin',lk=(!adm&&!hasAccess())?waLink(waMsg()):'';
  A.innerHTML=`<header><b id="brand">🩻 ${esc(settings.site_name)}</b><nav>
@@ -183,42 +243,55 @@ function go(v,id){
 }
 
 /* ---------- الطالب ---------- */
+const canCh=id=>!!me&&(hasAccess()||(!!id&&myEnr.has(id)));
+const money=p=>Number(p.price).toLocaleString('en-US')+' '+(p.currency||'');
 async function loadReq(){
- const r=await sb.from('sub_requests').select('*').eq('student_id',me.id).eq('status','pending').order('created_at',{ascending:false}).limit(1);
- myReq=(r.data||[])[0]||null;
+ const r=await sb.from('sub_requests').select('*').eq('student_id',me.id).eq('status','pending').order('created_at',{ascending:false});
+ myReqs=r.data||[];
 }
+async function loadAcc(){
+ const [a,b]=await Promise.all([sb.from('chapters').select('*').order('position'),sb.from('enrollments').select('chapter_id').eq('student_id',me.id)]);
+ chapters=a.data||[];myEnr=new Set((b.data||[]).map(x=>x.chapter_id));
+}
+function planCard(p){
+ const own=p.chapter_id&&myEnr.has(p.chapter_id),on=myReqs.some(r=>r.plan_id===p.id);
+ return`<div class="card plan${on?' sel':''}"><b>${esc(p.title)}</b><div class="price">${esc(money(p))}</div><p class="m">${p.chapter_id?'اشتراك دائم بدون مدة':'لمدة '+esc(p.months)+' شهر • كل الشابترات'}</p>${p.description?`<p class="m">${esc(p.description)}</p>`:''}${own?'<span class="chip active">✓ مفتوح عندك</span>':`<button class="btn sm${on?' gh':''}" data-act="pick" data-id="${esc(p.id)}">${on?'✓ تم الاختيار (إلغاء)':'اختيار الباقة'}</button>`}</div>`}
 function planHTML(){
- const L=plans.filter(p=>p.active);
+ const L=plans.filter(p=>p.active),pos=id=>{const i=chapters.findIndex(x=>x.id===id);return i<0?999:i};
+ const A=L.filter(p=>p.chapter_id).sort((a,b)=>pos(a.chapter_id)-pos(b.chapter_id)),B=L.filter(p=>!p.chapter_id);
  let h='<div class="card" style="margin-bottom:14px"><h2>باقات الاشتراك</h2>';
  if(!L.length)h+='<p class="m">لم تُضف باقات بعد، تواصل مع الإدارة.</p>';
- else h+='<p class="m">اختر الباقة المناسبة ثم تواصل معنا عبر واتساب لتفعيل اشتراكك.</p><div class="grid">'+L.map(p=>{const on=myReq&&myReq.plan_id===p.id;
-  return`<div class="card plan${on?' sel':''}"><b>${esc(p.title)}</b><div class="price">${esc(Number(p.price).toLocaleString('en-US'))} ${esc(p.currency||'')}</div><p class="m">لمدة ${esc(p.months)} شهر</p>${p.description?`<p class="m">${esc(p.description)}</p>`:''}<button class="btn sm${on?' gh':''}" data-act="pick" data-id="${esc(p.id)}">${on?'✓ تم الاختيار':'اختيار الباقة'}</button></div>`}).join('')+'</div>';
- if(myReq)h+='<div class="card ban" style="margin-top:12px">تم تسجيل اختيارك: <b>'+esc(myReq.plan_title)+'</b>. تواصل معنا الآن عبر واتساب ليتم تفعيل اشتراكك.</div>';
+ else{h+='<p class="m">اختر الشابتر (أو أكثر) ثم تواصل معنا عبر واتساب لتفعيل اشتراكك.</p>';
+  if(A.length)h+='<h3 class="sh">الشابترات</h3><div class="grid">'+A.map(planCard).join('')+'</div>';
+  if(B.length)h+='<h3 class="sh">الباقة الشاملة</h3><div class="grid">'+B.map(planCard).join('')+'</div>'}
+ if(myReqs.length){const tot=myReqs.reduce((a,r)=>a+Number(r.price||0),0);h+='<div class="card ban" style="margin-top:12px">اخترت: <b>'+myReqs.map(r=>esc(r.plan_title)).join('، ')+'</b><br>الإجمالي: <b>'+esc(tot.toLocaleString('en-US'))+'</b><br>تواصل معنا الآن عبر واتساب ليتم تفعيل اشتراكك.</div>'}
  const lk=waLink(waMsg());
  if(lk)h+=`<a class="btn wab" href="${esc(lk)}" target="_blank" rel="noopener">💬 تواصل عبر واتساب لتفعيل الاشتراك</a>`;
  return h+'</div>';
 }
 async function plansView(){
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- await loadReq();
- const st=subState(me);
- m.innerHTML=(st==='active'||st==='expiring'?`<div class="card" style="margin-bottom:14px">اشتراكك ${LBL[st]} حتى ${esc(me.sub_until)}</div>`:'')+planHTML();
+ await Promise.all([loadReq(),loadAcc()]);
+ const st=subState(me),own=chapters.filter(c=>myEnr.has(c.id));
+ m.innerHTML=(st==='active'||st==='expiring'?`<div class="card" style="margin-bottom:14px">اشتراكك الشامل ${LBL[st]} حتى ${esc(me.sub_until)}</div>`:'')+(own.length?`<div class="card" style="margin-bottom:14px"><b>شابتراتك المفتوحة:</b> ${own.map(c=>`<span class="chip active">${esc(chName(c.id))}</span>`).join(' ')}</div>`:'')+planHTML();
 }
 async function home(){
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [c,l]=await Promise.all([sb.from('courses').select('*').order('created_at'),sb.from('lessons').select('*').order('position')]);
+ const [c,l]=await Promise.all([sb.from('courses').select('*').order('created_at'),sb.from('lessons').select('*').order('position'),loadAcc()]);
  if(c.error||l.error)return m.innerHTML='<p class="m">تعذر تحميل البيانات، تأكد من تشغيل ملف schema.sql</p>';
  courses=c.data||[];lessons=l.data||[];
  const st=subState(me),d=subDays(me);
- let ban='',pb='';
+ let ban='',pb='',ex='';
  if(me.role!=='admin'){
-  if(st==='none'||st==='expired'){
-   if(st==='expired')ban='انتهى اشتراكك. اختر باقة للتجديد.';
-   await loadReq();pb=planHTML();
-  }else if(st==='expiring')ban='ينتهي اشتراكك خلال '+d+' يوم، جدّده من تبويب «الاشتراك».';
+  if(!hasAccess()){
+   await loadReq();
+   if(st==='expired')ban='انتهى اشتراكك الشامل.';
+   if(!myEnr.size)pb=planHTML();
+   else ex='<div class="card" style="margin-bottom:12px">تريد فتح شابترات أخرى؟ <button class="btn sm" data-act="go" data-v="plans">🛒 باقات الشابترات</button></div>';
+  }else if(st==='expiring')ban='ينتهي اشتراكك الشامل خلال '+d+' يوم، جدّده من تبويب «الاشتراك».';
  }
  const wel=settings.welcome_msg?`<div class="card" style="margin-bottom:12px;white-space:pre-wrap">${esc(settings.welcome_msg)}</div>`:'';
- m.innerHTML=wel+(ban?`<div class="card ban">${esc(ban)}</div>`:'')+pb+'<input id="q" placeholder="🔍 بحث ذكي في الكورسات والدروس..."><div id="res"></div>';
+ m.innerHTML=wel+(ban?`<div class="card ban">${esc(ban)}</div>`:'')+ex+pb+'<input id="q" placeholder="🔍 بحث ذكي في الكورسات والدروس..."><div id="res"></div>';
  draw('');
 }
 function draw(q){
@@ -230,9 +303,17 @@ function draw(q){
 }
 function courseView(id){
  const c=courses.find(x=>x.id===id);if(!c)return go('home');
- const ls=lessons.filter(l=>l.course_id===id);
- $('#main').innerHTML=`<button class="nb" data-act="go" data-v="home">← رجوع</button><h2 style="margin-top:10px">${esc(c.title)}</h2><p class="m" style="margin-bottom:12px">${esc(c.description)}</p><div class="card">`+
- (ls.length?ls.map((l,i)=>{const ok=hasAccess()||l.is_free;return`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i+1}. ${esc(l.title)}</span><span class="m">${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`}).join(''):'<p class="m">لا توجد دروس بعد.</p>')+'</div>';
+ const ls=lessons.filter(l=>l.course_id===id),chs=chapters.filter(x=>x.course_id===id);
+ const row=(l,i,ok)=>`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i}. ${esc(l.title)}</span><span class="m">${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`;
+ let h=`<button class="nb" data-act="go" data-v="home">← رجوع</button><h2 style="margin-top:10px">${esc(c.title)}</h2><p class="m" style="margin-bottom:12px">${esc(c.description)}</p>`;
+ chs.forEach((ch,ci)=>{
+  const cl=ls.filter(l=>l.chapter_id===ch.id),own=canCh(ch.id),pl=plans.find(p=>p.active&&p.chapter_id===ch.id);
+  h+=`<div class="card" style="margin-bottom:12px"><div class="chh"><b>الشابتر ${ci+1}: ${esc(ch.title)}</b>${own?'<span class="chip active">مفتوح ✓</span>':pl?`<button class="btn sm" data-act="go" data-v="plans">🔒 اشترك ${esc(money(pl))}</button>`:'<span class="chip none">مقفل</span>'}</div>`+(cl.length?cl.map((l,i)=>row(l,i+1,own)).join(''):'<p class="m">لا توجد دروس بعد.</p>')+'</div>';
+ });
+ const rest=ls.filter(l=>!chs.some(x=>x.id===l.chapter_id));
+ if(rest.length)h+='<div class="card">'+rest.map((l,i)=>row(l,i+1,hasAccess())).join('')+'</div>';
+ if(!ls.length&&!chs.length)h+='<div class="card"><p class="m">لا توجد دروس بعد.</p></div>';
+ $('#main').innerHTML=h;
 }
 async function lessonView(id){
  const l=lessons.find(x=>x.id===id);if(!l)return go('home');
@@ -280,8 +361,10 @@ function template(p){
 }
 let panel='members';
 function adminView(){return panel==='content'?contentView():panel==='site'?siteView():membersView()}
-const reqOf=id=>reqs.find(x=>x.student_id===id);
+const reqsOf=id=>reqs.filter(x=>x.student_id===id);
+const enrOf=id=>enr.filter(x=>x.student_id===id);
 const planOf=r=>r&&plans.find(x=>x.id===r.plan_id);
+function chName(id){const c=chapters.find(x=>x.id===id);if(!c)return '';const i=chapters.filter(x=>x.course_id===c.course_id).findIndex(x=>x.id===id);return 'الشابتر '+(i+1)+': '+c.title}
 function subDate(p,k){
  const t=new Date();t.setHours(0,0,0,0);
  let base=t;if(p.sub_until){const c=new Date(p.sub_until+'T00:00:00');if(c>t)base=c}
@@ -294,16 +377,18 @@ async function membersView(){
  panel='members';
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [s,a,r,pl]=await Promise.all([
+ const [s,a,r,pl,ch,en]=await Promise.all([
   sb.from('profiles').select('*').eq('role','student').order('created_at',{ascending:false}),
   sb.from('profiles').select('id,full_name,email').eq('role','admin').order('created_at'),
   sb.from('sub_requests').select('*').eq('status','pending').order('created_at',{ascending:false}),
-  sb.from('plans').select('*').order('position')]);
- students=s.data||[];reqs=r.data||[];plans=pl.data||[];
+  sb.from('plans').select('*').order('position'),
+  sb.from('chapters').select('*').order('position'),
+  sb.from('enrollments').select('*')]);
+ students=s.data||[];reqs=r.data||[];plans=pl.data||[];chapters=ch.data||[];enr=en.data||[];
  const admins=a.data||[];
  const cnt={active:0,expiring:0,expired:0,none:0};students.forEach(p=>cnt[subState(p)]++);
- m.innerHTML=`<div class="stats"><div class="card"><b>${students.length}</b>الطلاب</div><div class="card"><b class="active">${cnt.active}</b>نشط</div><div class="card"><b class="expiring">${cnt.expiring}</b>قارب</div><div class="card"><b class="expired">${cnt.expired}</b>منتهي</div><div class="card"><b class="none">${cnt.none}</b>غير مفعّل</div><div class="card"><b class="expiring">${reqs.length}</b>طلبات اشتراك</div></div>
- <div class="card"><h2>الأعضاء</h2><div class="row"><input id="sq" placeholder="بحث بالاسم أو الهاتف أو الإيميل"><select id="sf"><option value="">كل الحالات</option><option value="req">طلبات اشتراك</option><option value="active">نشط</option><option value="expiring">قارب على الانتهاء</option><option value="expired">منتهي</option><option value="none">غير مفعّل</option></select></div><div class="tw" id="st"></div></div>
+ m.innerHTML=`<div class="stats"><div class="card"><b>${students.length}</b>الطلاب</div><div class="card"><b class="active">${new Set(enr.map(x=>x.student_id)).size}</b>اشتراك بشابتر</div><div class="card"><b class="active">${cnt.active+cnt.expiring}</b>اشتراك شامل</div><div class="card"><b class="expiring">${reqs.length}</b>طلبات اشتراك</div></div>
+ <div class="card"><h2>الأعضاء</h2><div class="row"><input id="sq" placeholder="بحث بالاسم أو الهاتف أو الإيميل"><select id="sf"><option value="">الكل</option><option value="req">لديهم طلب اشتراك</option><option value="has">لديهم شابتر مفتوح</option><option value="none">بدون أي اشتراك</option></select></div><div class="tw" id="st"></div></div>
  <div class="card" style="margin-top:14px"><h2>المشرفون</h2><p class="m">اطلب من الشخص تسجيل حساب جديد في الموقع أولاً، ثم اكتب بريده هنا.</p>
  <div class="row"><input id="ae" type="email" placeholder="بريد المشرف الجديد" dir="ltr"><button class="btn sm" data-act="addadm">إضافة مشرف</button></div>
  <div class="tw"><table>${admins.map(x=>`<tr><td>${esc(x.full_name||'-')}<br><span class="m" dir="ltr">${esc(x.email||'')}</span></td><td>${x.id===me.id?'<span class="m">أنت</span>':`<button class="btn sm gh" data-act="rmadm" data-id="${esc(x.id)}">إزالة</button>`}</td></tr>`).join('')}</table></div></div>`;
@@ -311,13 +396,18 @@ async function membersView(){
 }
 function drawStudents(){
  const q=norm(($('#sq')||{}).value),f=($('#sf')||{}).value;
- const L=students.filter(p=>(!f||(f==='req'?reqOf(p.id):subState(p)===f))&&(!q||norm((p.full_name||'')+(p.phone||'')+(p.email||'')).includes(q)));
- $('#st').innerHTML=L.length?`<table><tr><th>الطالب</th><th>الحالة</th><th>ينتهي</th><th>الباقة المطلوبة</th><th>تفعيل</th><th>مراسلة</th></tr>`+L.map(p=>{const s=subState(p),rq=reqOf(p.id),pl=planOf(rq);return`<tr><td>${esc(p.full_name||'-')}<br><span class="m">${esc(p.phone||'')}</span></td><td><span class="chip ${s}">${LBL[s]}</span></td><td>${esc(p.sub_until||'-')}</td><td>${rq?`<b>${esc(rq.plan_title||'')}</b><br><span class="m">${esc(pl?pl.months:rq.months)} شهر</span>`:'-'}</td><td>${rq?`<button class="btn sm" data-act="approve" data-id="${esc(p.id)}">✅ تفعيل الباقة</button><br>`:''}${[1,3,6,12].map(k=>`<button class="btn sm" data-act="sub" data-id="${esc(p.id)}" data-k="${k}">+${k}ش</button>`).join('')}<button class="btn sm gh" data-act="unsub" data-id="${esc(p.id)}">إيقاف</button></td><td><button class="btn sm" data-act="msg" data-id="${esc(p.id)}">✉ رسالة</button></td></tr>`}).join('')+'</table>':'<p class="m">لا يوجد أعضاء.</p>';
+ const opts=chapters.map(c=>`<option value="${esc(c.id)}">${esc(chName(c.id))}</option>`).join('');
+ const L=students.filter(p=>(!f||(f==='req'?reqsOf(p.id).length:f==='has'?enrOf(p.id).length:(!enrOf(p.id).length&&subState(p)==='none')))&&(!q||norm((p.full_name||'')+(p.phone||'')+(p.email||'')).includes(q)));
+ $('#st').innerHTML=L.length?`<table><tr><th>الطالب</th><th>الشابترات</th><th>اشتراك شامل</th><th>مراسلة</th></tr>`+L.map(p=>{const s=subState(p);
+  const own=enrOf(p.id).map(x=>`<span class="chip active">${esc(chName(x.chapter_id))} <a class="lnk" data-act="revch" data-sid="${esc(p.id)}" data-cid="${esc(x.chapter_id)}">✕</a></span>`).join(' ');
+  const pend=reqsOf(p.id).map(r=>`<div style="margin-top:6px">⏳ ${esc(r.plan_title||'')} <button class="btn sm" data-act="approve" data-rid="${esc(r.id)}">✅ تفعيل</button></div>`).join('');
+  const grant=chapters.length?`<div style="margin-top:6px"><select id="gs_${esc(p.id)}" style="width:auto;max-width:150px;padding:6px">${opts}</select> <button class="btn sm gh" data-act="grant" data-id="${esc(p.id)}">منح</button></div>`:'';
+  return`<tr><td>${esc(p.full_name||'-')}<br><span class="m">${esc(p.phone||'')}</span></td><td>${own||'<span class="m">لا يوجد</span>'}${pend}${grant}</td><td><span class="chip ${s}">${LBL[s]}</span><br><span class="m">${esc(p.sub_until||'')}</span><br>${[1,3,6,12].map(k=>`<button class="btn sm" data-act="sub" data-id="${esc(p.id)}" data-k="${k}">+${k}ش</button>`).join('')}<button class="btn sm gh" data-act="unsub" data-id="${esc(p.id)}">إيقاف</button></td><td><button class="btn sm" data-act="msg" data-id="${esc(p.id)}">✉ رسالة</button></td></tr>`}).join('')+'</table>':'<p class="m">لا يوجد أعضاء.</p>';
 }
 async function setSub(id,date){
  const {error}=await sb.from('profiles').update({sub_until:date}).eq('id',id);
  if(error)return toast('فشل التحديث: '+error.message);
- if(date)await sb.from('sub_requests').update({status:'done'}).eq('student_id',id).eq('status','pending');
+ if(date)await sb.from('sub_requests').update({status:'done'}).eq('student_id',id).eq('status','pending').is('chapter_id',null);
  const p=students.find(x=>x.id===id);if(p)p.sub_until=date;toast('تم التحديث ✅');adminView();
 }
 
@@ -326,36 +416,52 @@ async function contentView(){
  panel='content';
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [c,l,f]=await Promise.all([sb.from('courses').select('id,title').order('created_at'),sb.from('lessons').select('id,course_id,title,is_free').order('position'),sb.from('flashcards').select('id,front').order('front')]);
- const cs=c.data||[],ls=l.data||[],fl=f.data||[];
+ const [c,l,f,ch]=await Promise.all([sb.from('courses').select('id,title').order('created_at'),sb.from('lessons').select('id,course_id,chapter_id,title,is_free').order('position'),sb.from('flashcards').select('id,front').order('front'),sb.from('chapters').select('*').order('position')]);
+ const cs=c.data||[],ls=l.data||[],fl=f.data||[];chapters=ch.data||[];
  const opts=cs.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('');
  const cn=id=>(cs.find(x=>x.id===id)||{}).title||'';
+ const chOpts=none=>`<option value="">${none}</option>`+chapters.map(x=>`<option value="${esc(x.id)}">${esc(cn(x.course_id))} — ${esc(chName(x.id))}</option>`).join('');
  const row=(t,b)=>`<div class="li" style="cursor:default"><span>${t}</span><span>${b}</span></div>`;
  const del=(a,id)=>`<button class="btn sm gh" data-act="${a}" data-id="${esc(id)}">حذف</button>`;
  m.innerHTML=`<div class="card"><h2>إضافة محتوى</h2>
  <b>كورس جديد</b><input id="ct" placeholder="عنوان الكورس"><input id="cd" placeholder="وصف مختصر"><input id="cu" placeholder="رابط صورة الغلاف (اختياري)" dir="ltr"><button class="btn sm" data-act="addc">حفظ الكورس</button><hr style="border-color:var(--b);margin:12px 0">
- <b>درس جديد</b><select id="lc">${opts}</select><input id="lt" placeholder="عنوان الدرس"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr"><textarea id="ln" rows="3" placeholder="ملاحظات الدرس"></textarea><label class="m"><input type="checkbox" id="lf" style="width:auto"> درس مجاني</label><br><button class="btn sm" data-act="addl">حفظ الدرس</button><hr style="border-color:var(--b);margin:12px 0">
- <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>
+ <b>شابتر جديد</b><p class="m">يُنشأ له باقة تلقائياً، وتحدد سعرها من تبويب «الموقع».</p><select id="chc">${opts}</select><input id="cht" placeholder="اسم الشابتر"><button class="btn sm" data-act="addch">حفظ الشابتر</button><hr style="border-color:var(--b);margin:12px 0">
+ <b>درس جديد</b><select id="lc">${opts}</select><select id="lch">${chOpts('بدون شابتر (حسب الكورس فقط)')}</select><input id="lt" placeholder="عنوان الدرس"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr"><textarea id="ln" rows="3" placeholder="ملاحظات الدرس"></textarea><label class="m"><input type="checkbox" id="lf" style="width:auto"> درس مجاني</label><br><button class="btn sm" data-act="addl">حفظ الدرس</button><hr style="border-color:var(--b);margin:12px 0">
+ <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><select id="fch">${chOpts('لكل المشتركين')}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>
  <div class="card" style="margin-top:14px"><h2>الكورسات (${cs.length})</h2>${cs.map(x=>row(esc(x.title),del('delc',x.id))).join('')||'<p class="m">لا توجد كورسات.</p>'}</div>
- <div class="card" style="margin-top:14px"><h2>الدروس (${ls.length})</h2>${ls.map(x=>row(esc(cn(x.course_id))+' — '+esc(x.title),`<button class="btn sm gh" data-act="togfree" data-id="${esc(x.id)}" data-v="${x.is_free?1:0}">${x.is_free?'🆓 مجاني':'💰 مدفوع'}</button>`+del('dell',x.id))).join('')||'<p class="m">لا توجد دروس.</p>'}</div>
+ <div class="card" style="margin-top:14px"><h2>الشابترات (${chapters.length})</h2>${chapters.map(x=>row(esc(cn(x.course_id))+' — '+esc(chName(x.id)),del('delch',x.id))).join('')||'<p class="m">لا توجد شابترات.</p>'}</div>
+ <div class="card" style="margin-top:14px"><h2>الدروس (${ls.length})</h2>${ls.map(x=>row(esc(cn(x.course_id))+(x.chapter_id?' — '+esc(chName(x.chapter_id)):'')+' — '+esc(x.title),`<button class="btn sm gh" data-act="togfree" data-id="${esc(x.id)}" data-v="${x.is_free?1:0}">${x.is_free?'🆓 مجاني':'💰 مدفوع'}</button>`+del('dell',x.id))).join('')||'<p class="m">لا توجد دروس.</p>'}</div>
  <div class="card" style="margin-top:14px"><h2>بطاقات المراجعة (${fl.length})</h2>${fl.map(x=>row(esc(x.front),del('delf',x.id))).join('')||'<p class="m">لا توجد بطاقات.</p>'}</div>`;
 }
 
 /* ===== لوحة الموقع ===== */
-function planEdit(p){const i=esc(p.id);return`<div class="card" style="margin-top:10px"><input id="pt_${i}" value="${esc(p.title)}" placeholder="اسم الباقة"><div class="row"><input id="pm_${i}" type="number" min="1" value="${esc(p.months)}" placeholder="عدد الشهور"><input id="pp_${i}" type="number" min="0" value="${esc(p.price)}" placeholder="السعر"><input id="pc_${i}" value="${esc(p.currency||'')}" placeholder="العملة"></div><input id="pd_${i}" value="${esc(p.description||'')}" placeholder="وصف مختصر (اختياري)"><label class="m"><input type="checkbox" id="pa_${i}" style="width:auto" ${p.active?'checked':''}> ظاهرة للطلاب</label><br><button class="btn sm" data-act="savep" data-id="${i}">حفظ</button><button class="btn sm gh" data-act="delp" data-id="${i}">حذف</button></div>`}
+function planEdit(p){const i=esc(p.id);
+ const co='<option value="">باقة شاملة (كل الشابترات)</option>'+chapters.map(c=>`<option value="${esc(c.id)}" ${p.chapter_id===c.id?'selected':''}>${esc(chName(c.id))}</option>`).join('');
+ return`<div class="card" style="margin-top:10px"><select id="pch_${i}">${co}</select><input id="pt_${i}" value="${esc(p.title)}" placeholder="اسم الباقة"><div class="row"><input id="pm_${i}" type="number" min="1" value="${esc(p.months)}" placeholder="الشهور (للشاملة فقط)"><input id="pp_${i}" type="number" min="0" value="${esc(p.price)}" placeholder="السعر"><input id="pc_${i}" value="${esc(p.currency||'')}" placeholder="العملة"></div><input id="pd_${i}" value="${esc(p.description||'')}" placeholder="وصف مختصر (اختياري)"><label class="m"><input type="checkbox" id="pa_${i}" style="width:auto" ${p.active?'checked':''}> ظاهرة للطلاب</label><br><button class="btn sm" data-act="savep" data-id="${i}">حفظ</button><button class="btn sm gh" data-act="delp" data-id="${i}">حذف</button></div>`}
 async function siteView(){
  panel='site';
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const pl=await sb.from('plans').select('*').order('position');plans=pl.data||[];
+ const [pl,chq]=await Promise.all([sb.from('plans').select('*').order('position'),sb.from('chapters').select('*').order('position')]);plans=pl.data||[];chapters=chq.data||[];const wc=wmCfg();
  m.innerHTML=`<div class="card"><h2>إعدادات الموقع</h2>
  <label class="m">اسم الموقع</label><input id="s_name" value="${esc(settings.site_name)}">
  <label class="m">اسم المدرس (يظهر في الرسائل)</label><input id="s_teacher" value="${esc(settings.teacher_name)}">
  <label class="m">رقم واتساب الإدارة (مثال: 201001234567)</label><input id="s_wa" dir="ltr" inputmode="tel" value="${esc(settings.whatsapp)}">
  <label class="m">رسالة ترحيب تظهر للطلاب (اختياري)</label><textarea id="s_wel" rows="2">${esc(settings.welcome_msg)}</textarea>
  <button class="btn" data-act="savesite">حفظ الإعدادات</button></div>
- <div class="card" style="margin-top:14px"><h2>باقات الاشتراك</h2>${plans.map(planEdit).join('')||'<p class="m">لا توجد باقات.</p>'}
- <hr style="border-color:var(--b);margin:14px 0"><b>باقة جديدة</b><input id="np_t" placeholder="اسم الباقة"><div class="row"><input id="np_m" type="number" min="1" placeholder="عدد الشهور"><input id="np_p" type="number" min="0" placeholder="السعر"><input id="np_c" placeholder="العملة (ج.م)"></div><input id="np_d" placeholder="وصف مختصر (اختياري)"><button class="btn sm" data-act="addplan">إضافة الباقة</button></div>`;
+ <div class="card" style="margin-top:14px"><h2>العلامة المائية</h2><p class="m">تظهر فوق كل الشاشات للطلاب فقط، ولا تظهر لك كأدمن.</p>
+ <label class="m"><input type="checkbox" id="w_on" style="width:auto" ${wc.on?'checked':''}> تفعيل العلامة المائية</label><br>
+ <label class="m"><input type="checkbox" id="w_name" style="width:auto" ${wc.name?'checked':''}> اسم الطالب</label>
+ <label class="m"><input type="checkbox" id="w_phone" style="width:auto" ${wc.phone?'checked':''}> رقم الهاتف</label>
+ <label class="m"><input type="checkbox" id="w_email" style="width:auto" ${wc.email?'checked':''}> البريد</label>
+ <input id="w_text" placeholder="نص ثابت إضافي (اختياري) مثل: أكاديمية الأشعة" value="${esc(wc.text)}">
+ <label class="m">الشفافية: <b id="w_ov"></b></label><input type="range" id="w_op" min="4" max="40" step="1" value="${Math.round(wc.op*100)}">
+ <p class="m">معاينة:</p><div id="wmprev" style="height:130px;border-radius:12px;border:1px solid var(--b);background-color:#0a1626;background-repeat:repeat"></div>
+ <button class="btn" data-act="savewm">حفظ العلامة المائية</button></div>
+ 
+ <div class="card" style="margin-top:14px"><h2>باقات الاشتراك</h2><p class="m">لكل شابتر باقة تُنشأ تلقائياً بسعر 0 وغير ظاهرة. اكتب السعر وفعّل «ظاهرة للطلاب» ثم احفظ. الشابتر دائم بلا مدة، والمدة للباقة الشاملة فقط.</p>${plans.map(planEdit).join('')||'<p class="m">لا توجد باقات.</p>'}
+ <hr style="border-color:var(--b);margin:14px 0"><b>باقة جديدة</b><select id="np_ch"><option value="">باقة شاملة (كل الشابترات)</option>${chapters.map(c=>`<option value="${esc(c.id)}">${esc(chName(c.id))}</option>`).join('')}</select><input id="np_t" placeholder="اسم الباقة"><div class="row"><input id="np_m" type="number" min="1" placeholder="عدد الشهور"><input id="np_p" type="number" min="0" placeholder="السعر"><input id="np_c" placeholder="العملة (ج.م)"></div><input id="np_d" placeholder="وصف مختصر (اختياري)"><button class="btn sm" data-act="addplan">إضافة الباقة</button></div>`;
+ wmPrev();
 }
 
 function openMsg(id){
@@ -387,7 +493,12 @@ const act={
   if(r.error)return toast(r.error.message);
   if(r.data.session)boot();else authView('تم إنشاء الحساب، تحقق من بريدك لتأكيده ثم سجّل الدخول')},
  async google(){const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});if(r.error)toast(r.error.message)},
- async install(){if(dip){dip.prompt();const r=await dip.userChoice;dip=null;if(r.outcome==='accepted')document.body.classList.remove('canin')}else toast('اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»')},
+ install(){if(dip||isIOS)popShow(true);else toast('افتح قائمة المتصفح ثم اختر «تثبيت التطبيق»')},
+ popclose:()=>popHide(true),
+ async doinst(){if(!dip)return popHide(false);popHide(false);dip.prompt();const r=await dip.userChoice;dip=null;if(r.outcome==='accepted')document.body.classList.remove('canin');else popHide(true)},
+ async savewm(){const row={wm_enabled:$('#w_on').checked,wm_name:$('#w_name').checked,wm_phone:$('#w_phone').checked,wm_email:$('#w_email').checked,wm_text:val('w_text'),wm_opacity:Number($('#w_op').value)/100};
+  const r=await sb.from('site_settings').update(row).eq('id',1);if(r.error)return toast('فشل الحفظ: '+r.error.message);
+  Object.assign(settings,row);toast('تم حفظ العلامة المائية ✅')},
  async out(){await sb.auth.signOut();me=null;authView()},
  go:e=>go(e.dataset.v),course:e=>go('course',e.dataset.id),lesson:e=>go('lesson',e.dataset.id),
  show(){$('#fc').textContent=cur.back;$('#fb').innerHTML='<button class="btn" data-act="yes">عرفتها ✅</button><button class="btn gh" data-act="no">لم أعرفها ❌</button>'},
@@ -401,8 +512,9 @@ const act={
  msg:e=>openMsg(e.dataset.id),wa:()=>sendMsg('wa'),gm:()=>sendMsg('gmail'),cm:()=>{$('#modal').className=''},
  async addc(){if(!val('ct'))return toast('اكتب عنوان الكورس');const u=val('cu');if(u&&!/^https:\/\//.test(u))return toast('رابط الصورة يجب أن يبدأ بـ https://');
   if(await ins('courses',{title:val('ct'),description:val('cd'),cover_url:u||null},'تم حفظ الكورس ✅'))adminView()},
- async addl(){if(!val('lc')||!val('lt'))return toast('اختر الكورس واكتب العنوان');if(val('lv')&&!embed(val('lv')))return toast('رابط الفيديو غير صالح (https فقط)');
-  const {data,error}=await sb.from('lessons').insert({course_id:val('lc'),title:val('lt'),is_free:$('#lf').checked,position:Date.now()%1e9}).select('id').single();
+ async addl(){const ch=chapters.find(x=>x.id===val('lch')),cid=ch?ch.course_id:val('lc');
+  if(!cid||!val('lt'))return toast('اختر الكورس واكتب العنوان');if(val('lv')&&!embed(val('lv')))return toast('رابط الفيديو غير صالح (https فقط)');
+  const {data,error}=await sb.from('lessons').insert({course_id:cid,chapter_id:ch?ch.id:null,title:val('lt'),is_free:$('#lf').checked,position:Date.now()%1e9}).select('id').single();
   if(error)return toast('خطأ: '+error.message);
   if(await ins('lesson_media',{lesson_id:data.id,video_url:val('lv')||null,notes:val('ln')||null},'تم حفظ الدرس ✅'))adminView()},
  async addadm(){const em=val('ae').toLowerCase();if(!em)return toast('اكتب بريد المشرف');
@@ -419,13 +531,27 @@ const act={
   const r=await sb.from('profiles').update({phone:ph}).eq('id',me.id);if(r.error)return toast('فشل الحفظ: '+r.error.message);
   me.phone=ph;shell();go('home')},
  async pick(e){const p=plans.find(x=>x.id===e.dataset.id);if(!p)return;
-  await sb.from('sub_requests').delete().eq('student_id',me.id).eq('status','pending');
-  const r=await sb.from('sub_requests').insert({student_id:me.id,plan_id:p.id,plan_title:p.title,months:p.months,price:p.price});
+  if(myReqs.some(r=>r.plan_id===p.id)){await sb.from('sub_requests').delete().eq('student_id',me.id).eq('plan_id',p.id).eq('status','pending');toast('تم إلغاء الاختيار');return go('plans')}
+  let d=sb.from('sub_requests').delete().eq('student_id',me.id).eq('status','pending');d=p.chapter_id?d.eq('chapter_id',p.chapter_id):d.is('chapter_id',null);await d;
+  const r=await sb.from('sub_requests').insert({student_id:me.id,plan_id:p.id,plan_title:p.title,months:p.months,price:p.price,chapter_id:p.chapter_id||null});
   if(r.error)return toast('خطأ: '+r.error.message);toast('تم اختيار الباقة ✅');go('plans')},
- approve(e){const p=students.find(x=>x.id===e.dataset.id),q=reqOf(e.dataset.id);if(!p||!q)return;
-  const pl=planOf(q),k=pl?pl.months:q.months;
-  if(!confirm('تفعيل '+k+' شهر للطالب '+(p.full_name||'')+'؟'))return;
-  return setSub(p.id,subDate(p,k))},
+ async approve(e){const q=reqs.find(x=>x.id===e.dataset.rid);if(!q)return;const p=students.find(x=>x.id===q.student_id);if(!p)return;
+  const pl=planOf(q),cid=pl?pl.chapter_id:q.chapter_id;
+  if(cid){if(!confirm('فتح «'+chName(cid)+'» للطالب '+(p.full_name||'')+'؟'))return;
+   const r=await sb.from('enrollments').upsert({student_id:p.id,chapter_id:cid});if(r.error)return toast('فشل: '+r.error.message);
+   await sb.from('sub_requests').update({status:'done'}).eq('id',q.id);toast('تم فتح الشابتر ✅');return membersView()}
+  const k=pl?pl.months:q.months;if(!confirm('تفعيل اشتراك شامل '+k+' شهر للطالب '+(p.full_name||'')+'؟'))return;
+  const r2=await sb.from('profiles').update({sub_until:subDate(p,k)}).eq('id',p.id);if(r2.error)return toast('فشل: '+r2.error.message);
+  await sb.from('sub_requests').update({status:'done'}).eq('id',q.id);toast('تم التفعيل ✅');membersView()},
+ async grant(e){const cid=val('gs_'+e.dataset.id);if(!cid)return toast('اختر الشابتر');const r=await sb.from('enrollments').upsert({student_id:e.dataset.id,chapter_id:cid});if(r.error)return toast('فشل: '+r.error.message);toast('تم فتح الشابتر ✅');membersView()},
+ async revch(e){if(!confirm('سحب هذا الشابتر من الطالب؟'))return;const r=await sb.from('enrollments').delete().eq('student_id',e.dataset.sid).eq('chapter_id',e.dataset.cid);if(r.error)return toast('فشل: '+r.error.message);toast('تم السحب');membersView()},
+ async addch(){if(!val('chc')||!val('cht'))return toast('اختر الكورس واكتب اسم الشابتر');
+  const pos=chapters.filter(x=>x.course_id===val('chc')).length+1;
+  const {data,error}=await sb.from('chapters').insert({course_id:val('chc'),title:val('cht'),position:pos}).select('id').single();
+  if(error)return toast('خطأ: '+error.message);
+  await sb.from('plans').insert({title:'الشابتر '+pos+': '+val('cht'),months:1,price:0,currency:'ج.م',position:100+pos,active:false,chapter_id:data.id});
+  toast('تم حفظ الشابتر ✅ حدّد سعره من تبويب الموقع');adminView()},
+ async delch(e){if(!confirm('حذف الشابتر وباقته؟ (دروسه تبقى بدون شابتر)'))return;const r=await sb.from('chapters').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
  async delc(e){if(!confirm('حذف الكورس وكل دروسه؟'))return;const r=await sb.from('courses').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
  async dell(e){if(!confirm('حذف هذا الدرس؟'))return;const r=await sb.from('lessons').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
  async delf(e){if(!confirm('حذف هذه البطاقة؟'))return;const r=await sb.from('flashcards').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
@@ -434,18 +560,20 @@ const act={
   const r=await sb.from('site_settings').upsert(row);if(r.error)return toast('فشل الحفظ: '+r.error.message);
   settings=row;TEACHER=row.teacher_name;document.title=row.site_name;const b=$('#brand');if(b)b.textContent='🩻 '+row.site_name;toast('تم الحفظ ✅')},
  async addplan(){if(!val('np_t'))return toast('اكتب اسم الباقة');
-  const r=await sb.from('plans').insert({title:val('np_t'),months:Number(val('np_m'))||1,price:Number(val('np_p'))||0,currency:val('np_c')||'ج.م',description:val('np_d')||null,position:plans.length+1});
+  const r=await sb.from('plans').insert({title:val('np_t'),chapter_id:val('np_ch')||null,months:Number(val('np_m'))||1,price:Number(val('np_p'))||0,currency:val('np_c')||'ج.م',description:val('np_d')||null,position:plans.length+1});
   if(r.error)return toast('خطأ: '+r.error.message);toast('تمت إضافة الباقة ✅');siteView()},
  async savep(e){const i=e.dataset.id;if(!val('pt_'+i))return toast('اكتب اسم الباقة');
-  const r=await sb.from('plans').update({title:val('pt_'+i),months:Number(val('pm_'+i))||1,price:Number(val('pp_'+i))||0,currency:val('pc_'+i),description:val('pd_'+i)||null,active:$('#pa_'+i).checked}).eq('id',i);
+  const r=await sb.from('plans').update({chapter_id:val('pch_'+i)||null,title:val('pt_'+i),months:Number(val('pm_'+i))||1,price:Number(val('pp_'+i))||0,currency:val('pc_'+i),description:val('pd_'+i)||null,active:$('#pa_'+i).checked}).eq('id',i);
   if(r.error)return toast('فشل: '+r.error.message);toast('تم الحفظ ✅')},
  async delp(e){if(!confirm('حذف هذه الباقة؟'))return;const r=await sb.from('plans').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');siteView()},
  async addf(){if(!val('fcid')||!val('ff')||!val('fb2'))return toast('أكمل البيانات');
-  if(await ins('flashcards',{course_id:val('fcid'),front:val('ff'),back:val('fb2')},'تم حفظ البطاقة ✅')){adminView()}}
+  const ch=chapters.find(x=>x.id===val('fch'));
+  if(await ins('flashcards',{course_id:ch?ch.course_id:val('fcid'),chapter_id:ch?ch.id:null,front:val('ff'),back:val('fb2')},'تم حفظ البطاقة ✅')){adminView()}}
+
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||!act[el.dataset.act])return;
  Promise.resolve(act[el.dataset.act](el)).catch(x=>toast('حدث خطأ: '+(x&&x.message||x)))});
-document.addEventListener('input',e=>{if(e.target.id==='q')draw(e.target.value);if(e.target.id==='sq')drawStudents()});
+document.addEventListener('input',e=>{if(e.target.id==='q')draw(e.target.value);if(e.target.id==='sq')drawStudents();if((e.target.id||'').startsWith('w_'))wmPrev()});
 document.addEventListener('change',e=>{if(e.target.id==='sf')drawStudents()});
 if(SUPABASE_URL.startsWith('PUT_'))authView('عدّل SUPABASE_URL و SUPABASE_KEY داخل index.html');else boot();
 </script>
