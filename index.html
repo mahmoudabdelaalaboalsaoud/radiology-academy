@@ -106,6 +106,8 @@ h3.sh{margin:14px 0 8px;font-size:1rem;color:var(--c)}
 .fi{display:inline-block;width:auto;min-width:90px;margin:2px 4px;padding:6px 8px}
 .fi.okf,.ms.okf{border-color:var(--ok,#34d399)}.fi.badf,.ms.badf{border-color:#f87171}
 .qbar{height:6px;border-radius:99px;background:var(--b);overflow:hidden;margin:8px 0}.qbar i{display:block;height:100%;background:linear-gradient(90deg,var(--c2),var(--c))}
+.sbar{position:fixed;left:0;right:0;bottom:0;z-index:18;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:rgba(8,18,34,.97);border-top:1px solid var(--c);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
+.sbar .btn{margin:0;background:#25d366;color:#04101c;text-decoration:none;display:inline-block;text-align:center}
 </style>
 </head>
 <body>
@@ -128,7 +130,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReqs=[],chapters=[],myEnr=new Set(),myRes={},enr=[],settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
+let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReqs=[],chapters=[],myEnr=new Set(),myRes={},enr=[],selCh=new Set(),selInit=false,settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
 const A=$('#app');
 
 function toast(m){const t=$('#toast');t.textContent=m;t.className='show';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='',2800)}
@@ -198,7 +200,7 @@ function wmPrev(){
 
 /* ---------- المصادقة ---------- */
 function authView(msg,mode){mode=mode||'in';const up=mode==='up';
- document.body.classList.remove('prot','hid');const w0=$('#wm');if(w0)w0.remove();
+ document.body.classList.remove('prot','hid');selCh.clear();selInit=false;const w0=$('#wm');if(w0)w0.remove();
  A.innerHTML=`<div class="auth card"><h1 style="font-size:1.6rem">🩻 أكاديمية الأشعة</h1><p class="m" style="margin:6px 0 10px">${esc(msg||'سجّل دخولك للمتابعة')}</p>
  ${up?'<input id="fn" placeholder="الاسم الكامل"><input id="ph" placeholder="رقم الواتساب" inputmode="tel" dir="ltr">':''}
  <input id="em" type="email" placeholder="البريد الإلكتروني" dir="ltr"><input id="pw" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" dir="ltr">
@@ -232,9 +234,17 @@ const WAI='<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.86
 function waLink(t){const n=waNum(settings.whatsapp);return n?'https://wa.me/'+n+'?text='+encodeURIComponent(t):''}
 function waMsg(){
  const base='مرحباً، أنا '+(me.full_name||'')+' ('+(me.email||'')+')';
- if(!myReqs.length)return base+' وأرغب في الاشتراك في الأكاديمية.';
- const tot=myReqs.reduce((a,r)=>a+Number(r.price||0),0);
- return base+' واخترت: '+myReqs.map(r=>r.plan_title+' ('+Number(r.price).toLocaleString('en-US')+')').join('، ')+' — الإجمالي '+tot.toLocaleString('en-US')+'. أرغب في تفعيل اشتراكي.';
+ const L=selList(),B=myReqs.filter(r=>!r.chapter_id);
+ if(!L.length&&!B.length)return base+' وأرغب في الاشتراك في الأكاديمية.';
+ let t=base+'\nأرغب في تفعيل الاشتراك في:';
+ const byC={};L.forEach(c=>(byC[c.course_id]=byC[c.course_id]||[]).push(c));
+ Object.keys(byC).forEach(cid=>{const co=courses.find(x=>x.id===cid),all=chapters.filter(x=>x.course_id===cid),sel=byC[cid];
+  t+='\n\n📚 '+(co?co.title:'')+(sel.length===all.length?' (كل الشابترات)':'')+':';
+  sel.forEach(c=>{const pr=chPrice(c.id);t+='\n- '+chName(c.id)+(pr?' ('+pr.toLocaleString('en-US')+' '+cur$()+')':'')})});
+ B.forEach(r=>{t+='\n\n- '+r.plan_title+' ('+Number(r.price).toLocaleString('en-US')+' '+cur$()+')'});
+ const tot=selTotal()+B.reduce((a,r)=>a+Number(r.price||0),0);
+ if(tot)t+='\n\nالإجمالي: '+tot.toLocaleString('en-US')+' '+cur$();
+ return t;
 }
 
 function shell(){
@@ -256,32 +266,45 @@ const money=p=>Number(p.price).toLocaleString('en-US')+' '+(p.currency||'');
 async function loadReq(){
  const r=await sb.from('sub_requests').select('*').eq('student_id',me.id).eq('status','pending').order('created_at',{ascending:false});
  myReqs=r.data||[];
+ if(!selInit){myReqs.forEach(x=>{if(x.chapter_id)selCh.add(x.chapter_id)});selInit=true}
 }
 async function loadAcc(){
  const [a,b,c2]=await Promise.all([sb.from('chapters').select('*').order('position'),sb.from('enrollments').select('chapter_id').eq('student_id',me.id),sb.from('quiz_results').select('lesson_id,score,total').eq('student_id',me.id)]);
  chapters=a.data||[];myEnr=new Set((b.data||[]).map(x=>x.chapter_id));myRes={};(c2.data||[]).forEach(x=>myRes[x.lesson_id]={score:x.score,total:x.total});
 }
+const chPlan=id=>plans.find(p=>p.active&&p.chapter_id===id);
+const chPrice=id=>{const p=chPlan(id);return p?Number(p.price)||0:0};
+const cur$=()=>{const p=plans.find(x=>x.currency);return p?p.currency:'ج.م'};
+const selList=()=>chapters.filter(c=>selCh.has(c.id)&&!canCh(c.id));
+const selTotal=()=>selList().reduce((a,c)=>a+chPrice(c.id),0);
+function selBar(){
+ const L=selList(),B=myReqs.filter(r=>!r.chapter_id);
+ if(hasAccess()||(!L.length&&!B.length))return '';
+ const tot=selTotal()+B.reduce((a,r)=>a+Number(r.price||0),0),lk=waLink(waMsg());
+ return`<div class="sbar"><div><b>${L.length+B.length}</b> ${B.length&&!L.length?'باقة':'شابتر'}${tot?' • '+esc(tot.toLocaleString('en-US'))+' '+esc(cur$()):''}</div>`+(lk?`<a class="btn" data-act="contact" href="${esc(lk)}" target="_blank" rel="noopener">💬 تواصل لتفعيل الاشتراك</a>`:'<button class="btn" data-act="contact">إرسال الطلب</button>')+'</div>';
+}
+const withBar=h=>{const b=selBar();return h+b+(b?'<div style="height:84px"></div>':'')};
+async function saveSel(){
+ const L=selList();
+ await sb.from('sub_requests').delete().eq('student_id',me.id).eq('status','pending').not('chapter_id','is',null);
+ if(L.length){const rows=L.map(c=>{const p=chPlan(c.id);return{student_id:me.id,plan_id:p?p.id:null,plan_title:chName(c.id),months:1,price:p?p.price:0,chapter_id:c.id}});
+  const r=await sb.from('sub_requests').insert(rows);if(r.error)toast('تعذر تسجيل الطلب: '+r.error.message);else toast('تم تسجيل طلبك ✅')}
+ await loadReq();
+}
 function planCard(p){
- const own=p.chapter_id&&myEnr.has(p.chapter_id),on=myReqs.some(r=>r.plan_id===p.id);
- return`<div class="card plan${on?' sel':''}"><b>${esc(p.title)}</b><div class="price">${esc(money(p))}</div><p class="m">${p.chapter_id?'اشتراك دائم بدون مدة':'لمدة '+esc(p.months)+' شهر • كل الشابترات'}</p>${p.description?`<p class="m">${esc(p.description)}</p>`:''}${own?'<span class="chip active">✓ مفتوح عندك</span>':`<button class="btn sm${on?' gh':''}" data-act="pick" data-id="${esc(p.id)}">${on?'✓ تم الاختيار (إلغاء)':'اختيار الباقة'}</button>`}</div>`}
+ const on=myReqs.some(r=>r.plan_id===p.id);
+ return`<div class="card plan${on?' sel':''}"><b>${esc(p.title)}</b><div class="price">${esc(money(p))}</div><p class="m">لمدة ${esc(p.months)} شهر • كل الشابترات</p>${p.description?`<p class="m">${esc(p.description)}</p>`:''}<button class="btn sm${on?' gh':''}" data-act="pick" data-id="${esc(p.id)}">${on?'✓ تم الاختيار (إلغاء)':'اختيار الباقة'}</button></div>`}
 function planHTML(){
- const L=plans.filter(p=>p.active),pos=id=>{const i=chapters.findIndex(x=>x.id===id);return i<0?999:i};
- const A=L.filter(p=>p.chapter_id).sort((a,b)=>pos(a.chapter_id)-pos(b.chapter_id)),B=L.filter(p=>!p.chapter_id);
- let h='<div class="card" style="margin-bottom:14px"><h2>باقات الاشتراك</h2>';
- if(!L.length)h+='<p class="m">لم تُضف باقات بعد، تواصل مع الإدارة.</p>';
- else{h+='<p class="m">اختر الشابتر (أو أكثر) ثم تواصل معنا عبر واتساب لتفعيل اشتراكك.</p>';
-  if(A.length)h+='<h3 class="sh">الشابترات</h3><div class="grid">'+A.map(planCard).join('')+'</div>';
-  if(B.length)h+='<h3 class="sh">الباقة الشاملة</h3><div class="grid">'+B.map(planCard).join('')+'</div>'}
- if(myReqs.length){const tot=myReqs.reduce((a,r)=>a+Number(r.price||0),0);h+='<div class="card ban" style="margin-top:12px">اخترت: <b>'+myReqs.map(r=>esc(r.plan_title)).join('، ')+'</b><br>الإجمالي: <b>'+esc(tot.toLocaleString('en-US'))+'</b><br>تواصل معنا الآن عبر واتساب ليتم تفعيل اشتراكك.</div>'}
- const lk=waLink(waMsg());
- if(lk)h+=`<a class="btn wab" href="${esc(lk)}" target="_blank" rel="noopener">💬 تواصل عبر واتساب لتفعيل الاشتراك</a>`;
- return h+'</div>';
+ const B=plans.filter(p=>p.active&&!p.chapter_id);if(!B.length)return '';
+ return '<div class="card" style="margin-bottom:14px"><h2>الباقة الشاملة</h2><p class="m">تفتح لك كل الشابترات لمدة محددة.</p><div class="grid">'+B.map(planCard).join('')+'</div></div>';
 }
 async function plansView(){
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
  await Promise.all([loadReq(),loadAcc()]);
- const st=subState(me),own=chapters.filter(c=>myEnr.has(c.id));
- m.innerHTML=(st==='active'||st==='expiring'?`<div class="card" style="margin-bottom:14px">اشتراكك الشامل ${LBL[st]} حتى ${esc(me.sub_until)}</div>`:'')+(own.length?`<div class="card" style="margin-bottom:14px"><b>شابتراتك المفتوحة:</b> ${own.map(c=>`<span class="chip active">${esc(chName(c.id))}</span>`).join(' ')}</div>`:'')+planHTML();
+ const st=subState(me),own=chapters.filter(c=>myEnr.has(c.id)),L=selList();
+ m.innerHTML=withBar((st==='active'||st==='expiring'?`<div class="card" style="margin-bottom:14px">اشتراكك الشامل ${LBL[st]} حتى ${esc(me.sub_until)}</div>`:'')+
+ (own.length?`<div class="card" style="margin-bottom:14px"><b>شابتراتك المفتوحة:</b> ${own.map(c=>`<span class="chip active">${esc(chName(c.id))}</span>`).join(' ')}</div>`:'')+
+ `<div class="card" style="margin-bottom:14px"><h2>اختياراتك</h2>`+(L.length?L.map(c=>`<div class="li" style="cursor:default"><span>${esc(chName(c.id))}</span><span class="acts">${chPrice(c.id)?`<span class="m">${esc(chPrice(c.id).toLocaleString('en-US'))} ${esc(cur$())}</span>`:''}<button class="btn sm gh" data-act="tgch" data-from="plans" data-id="${esc(c.id)}">✕</button></span></div>`).join(''):'<p class="m">لم تختر أي شابتر بعد. افتح أي كورس واختر الشابترات التي تريدها.</p>')+`<button class="btn" data-act="go" data-v="home">📚 تصفح الكورسات</button></div>`+planHTML());
 }
 async function home(){
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
@@ -289,17 +312,16 @@ async function home(){
  if(c.error||l.error)return m.innerHTML='<p class="m">تعذر تحميل البيانات، تأكد من تشغيل ملف schema.sql</p>';
  courses=c.data||[];lessons=l.data||[];
  const st=subState(me),d=subDays(me);
- let ban='',pb='',ex='';
+ let ban='',ex='';
  if(me.role!=='admin'){
   if(!hasAccess()){
    await loadReq();
    if(st==='expired')ban='انتهى اشتراكك الشامل.';
-   if(!myEnr.size)pb=planHTML();
-   else ex='<div class="card" style="margin-bottom:12px">تريد فتح شابترات أخرى؟ <button class="btn sm" data-act="go" data-v="plans">🛒 باقات الشابترات</button></div>';
-  }else if(st==='expiring')ban='ينتهي اشتراكك الشامل خلال '+d+' يوم، جدّده من تبويب «الاشتراك».';
+   ex=`<div class="card" style="margin-bottom:12px">${myEnr.size?'تريد فتح شابترات أخرى؟':'👋 أهلاً بك!'} افتح الكورس، واختر الشابتر (أو أكثر، أو كل الشابترات) ثم اضغط «تواصل» لتفعيل اشتراكك عبر واتساب.</div>`;
+  }else if(st==='expiring')ban='ينتهي اشتراكك الشامل خلال '+d+' يوم، تواصل مع الإدارة للتجديد.';
  }
  const wel=settings.welcome_msg?`<div class="card" style="margin-bottom:12px;white-space:pre-wrap">${esc(settings.welcome_msg)}</div>`:'';
- m.innerHTML=wel+(ban?`<div class="card ban">${esc(ban)}</div>`:'')+ex+pb+'<input id="q" placeholder="🔍 بحث ذكي في الكورسات والدروس..."><div id="res"></div>';
+ m.innerHTML=withBar(wel+(ban?`<div class="card ban">${esc(ban)}</div>`:'')+ex+'<input id="q" placeholder="🔍 بحث ذكي في الكورسات والدروس..."><div id="res"></div>');
  draw('');
 }
 function draw(q){
@@ -313,22 +335,24 @@ function courseView(id){
  const c=courses.find(x=>x.id===id);if(!c)return go('home');
  const ls=lessons.filter(l=>l.course_id===id),chs=chapters.filter(x=>x.course_id===id);
  const row=(l,i,ok)=>`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i}. ${esc(l.title)}</span><span class="m">${myRes[l.id]?'✓ '+myRes[l.id].score+'/'+myRes[l.id].total+' ':''}${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`;
+ const locked=chs.filter(x=>!canCh(x.id)),allSel=locked.length>0&&locked.every(x=>selCh.has(x.id));
  let h=`<button class="nb" data-act="go" data-v="home">← رجوع</button><h2 style="margin-top:10px">${esc(c.title)}</h2><p class="m" style="margin-bottom:12px">${esc(c.description)}</p>`;
+ if(locked.length)h+=`<div class="card" style="margin-bottom:12px"><p class="m">اختر الشابترات التي تريد الاشتراك فيها ثم اضغط «تواصل» في الأسفل.</p><button class="btn sm${allSel?' gh':''}" data-act="${allSel?'selnone':'selall'}" data-cid="${esc(id)}">${allSel?'إلغاء الاختيار':'☑ اختيار كل الشابترات'}</button></div>`;
  chs.forEach((ch,ci)=>{
-  const cl=ls.filter(l=>l.chapter_id===ch.id),own=canCh(ch.id),pl=plans.find(p=>p.active&&p.chapter_id===ch.id);
-  h+=`<div class="card" style="margin-bottom:12px"><div class="chh"><b>الشابتر ${ci+1}: ${esc(ch.title)}</b>${own?'<span class="chip active">مفتوح ✓</span>':pl?`<button class="btn sm" data-act="go" data-v="plans">🔒 اشترك ${esc(money(pl))}</button>`:'<span class="chip none">مقفل</span>'}</div>`+(cl.length?cl.map((l,i)=>row(l,i+1,own)).join(''):'<p class="m">لا توجد دروس بعد.</p>')+'</div>';
+  const cl=ls.filter(l=>l.chapter_id===ch.id),own=canCh(ch.id),on=selCh.has(ch.id),pr=chPrice(ch.id);
+  h+=`<div class="card" style="margin-bottom:12px"><div class="chh"><b>الشابتر ${ci+1}: ${esc(ch.title)}</b>${own?'<span class="chip active">مفتوح ✓</span>':`<span class="acts">${pr?`<span class="m">${esc(pr.toLocaleString('en-US'))} ${esc(cur$())}</span>`:''}<button class="btn sm${on?'':' gh'}" data-act="tgch" data-id="${esc(ch.id)}" data-cid="${esc(id)}">${on?'☑ تم الاختيار':'☐ اختيار'}</button></span>`}</div>`+(cl.length?cl.map((l,i)=>row(l,i+1,own)).join(''):'<p class="m">لا توجد دروس بعد.</p>')+'</div>';
  });
  const rest=ls.filter(l=>!chs.some(x=>x.id===l.chapter_id));
  if(rest.length)h+='<div class="card">'+rest.map((l,i)=>row(l,i+1,hasAccess())).join('')+'</div>';
  if(!ls.length&&!chs.length)h+='<div class="card"><p class="m">لا توجد دروس بعد.</p></div>';
- $('#main').innerHTML=h;
+ $('#main').innerHTML=withBar(h);
 }
 async function lessonView(id){
  const l=lessons.find(x=>x.id===id);if(!l)return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
  const {data}=await sb.from('lesson_media').select('*').eq('lesson_id',id).maybeSingle();
  const back=`<button class="nb" data-act="course" data-id="${esc(l.course_id)}">← رجوع للكورس</button><h2 style="margin-top:10px">${esc(l.title)}</h2>`;
- if(!data)return m.innerHTML=back+'<div class="card ban">🔒 هذا الدرس للمشتركين فقط. <a class="lnk" data-act="go" data-v="plans">اعرض باقات الاشتراك</a></div>';
+ if(!data)return m.innerHTML=back+'<div class="card ban">🔒 هذا الدرس للمشتركين فقط. <a class="lnk" data-act="course" data-id="'+esc(l.course_id)+'">ارجع للكورس واختر الشابتر للاشتراك</a></div>';
  const e=embed(data.video_url);
  m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'')+'<div id="qz" style="margin-top:14px"></div>';
  loadQuiz(id);
@@ -740,6 +764,10 @@ const act={
  async savephone(){const ph=val('ph').replace(/[^\d+]/g,'');if(ph.replace(/\D/g,'').length<8)return toast('اكتب رقم واتساب صحيح');
   const r=await sb.from('profiles').update({phone:ph}).eq('id',me.id);if(r.error)return toast('فشل الحفظ: '+r.error.message);
   me.phone=ph;shell();go('home')},
+ tgch(e){const id=e.dataset.id;if(selCh.has(id))selCh.delete(id);else selCh.add(id);if(e.dataset.from==='plans')plansView();else courseView(e.dataset.cid)},
+ selall(e){chapters.filter(x=>x.course_id===e.dataset.cid&&!canCh(x.id)).forEach(x=>selCh.add(x.id));courseView(e.dataset.cid)},
+ selnone(e){chapters.filter(x=>x.course_id===e.dataset.cid).forEach(x=>selCh.delete(x.id));courseView(e.dataset.cid)},
+ contact(){saveSel()},
  async pick(e){const p=plans.find(x=>x.id===e.dataset.id);if(!p)return;
   if(myReqs.some(r=>r.plan_id===p.id)){await sb.from('sub_requests').delete().eq('student_id',me.id).eq('plan_id',p.id).eq('status','pending');toast('تم إلغاء الاختيار');return go('plans')}
   let d=sb.from('sub_requests').delete().eq('student_id',me.id).eq('status','pending');d=p.chapter_id?d.eq('chapter_id',p.chapter_id):d.is('chapter_id',null);await d;
