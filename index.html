@@ -98,6 +98,14 @@ body.hid #blk{display:flex}
 #ipop .st em{font-style:normal;background:rgba(34,211,238,.18);border-radius:6px;padding:0 6px}
 .chh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 h3.sh{margin:14px 0 8px;font-size:1rem;color:var(--c)}
+.li.wr{flex-wrap:wrap}.acts{display:flex;flex-wrap:wrap;gap:2px}
+.qt{display:flex;gap:12px;align-items:center;cursor:pointer;padding:14px}.qt .ic2{font-size:1.9rem}
+.qo{display:block;width:100%;text-align:right;padding:12px;margin:6px 0;border-radius:12px;border:1px solid var(--b);background:rgba(5,11,20,.6);color:var(--t);font:inherit;cursor:pointer}
+.qo.on{border-color:var(--c);background:rgba(34,211,238,.12)}.qo.ok{border-color:var(--ok,#34d399);background:rgba(52,211,153,.15)}.qo.bad{border-color:#f87171;background:rgba(248,113,113,.15)}
+.qres{margin:10px 0;padding:12px;border-radius:12px;border:1px solid var(--b)}
+.fi{display:inline-block;width:auto;min-width:90px;margin:2px 4px;padding:6px 8px}
+.fi.okf,.ms.okf{border-color:var(--ok,#34d399)}.fi.badf,.ms.badf{border-color:#f87171}
+.qbar{height:6px;border-radius:99px;background:var(--b);overflow:hidden;margin:8px 0}.qbar i{display:block;height:100%;background:linear-gradient(90deg,var(--c2),var(--c))}
 </style>
 </head>
 <body>
@@ -120,7 +128,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>String(s||'').toLowerCase().replace(/[\u064B-\u065F\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').trim();
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReqs=[],chapters=[],myEnr=new Set(),enr=[],settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
+let me=null,courses=[],lessons=[],students=[],cards=[],cur=null,plans=[],reqs=[],myReqs=[],chapters=[],myEnr=new Set(),myRes={},enr=[],settings={site_name:'أكاديمية الأشعة',teacher_name:'',whatsapp:'',welcome_msg:''};
 const A=$('#app');
 
 function toast(m){const t=$('#toast');t.textContent=m;t.className='show';clearTimeout(toast.t);toast.t=setTimeout(()=>t.className='',2800)}
@@ -239,7 +247,7 @@ function shell(){
  <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
 function go(v,id){
  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
- ({home:home,cards:cardsView,plans:plansView,admin:membersView,members:membersView,content:contentView,site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
+ ({home:home,cards:cardsView,plans:plansView,admin:membersView,members:membersView,content:()=>{cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
 }
 
 /* ---------- الطالب ---------- */
@@ -250,8 +258,8 @@ async function loadReq(){
  myReqs=r.data||[];
 }
 async function loadAcc(){
- const [a,b]=await Promise.all([sb.from('chapters').select('*').order('position'),sb.from('enrollments').select('chapter_id').eq('student_id',me.id)]);
- chapters=a.data||[];myEnr=new Set((b.data||[]).map(x=>x.chapter_id));
+ const [a,b,c2]=await Promise.all([sb.from('chapters').select('*').order('position'),sb.from('enrollments').select('chapter_id').eq('student_id',me.id),sb.from('quiz_results').select('lesson_id,score,total').eq('student_id',me.id)]);
+ chapters=a.data||[];myEnr=new Set((b.data||[]).map(x=>x.chapter_id));myRes={};(c2.data||[]).forEach(x=>myRes[x.lesson_id]={score:x.score,total:x.total});
 }
 function planCard(p){
  const own=p.chapter_id&&myEnr.has(p.chapter_id),on=myReqs.some(r=>r.plan_id===p.id);
@@ -304,7 +312,7 @@ function draw(q){
 function courseView(id){
  const c=courses.find(x=>x.id===id);if(!c)return go('home');
  const ls=lessons.filter(l=>l.course_id===id),chs=chapters.filter(x=>x.course_id===id);
- const row=(l,i,ok)=>`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i}. ${esc(l.title)}</span><span class="m">${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`;
+ const row=(l,i,ok)=>`<div class="li" data-act="lesson" data-id="${esc(l.id)}"><span>${i}. ${esc(l.title)}</span><span class="m">${myRes[l.id]?'✓ '+myRes[l.id].score+'/'+myRes[l.id].total+' ':''}${l.is_free?'🆓 مجاني':ok?'▶':'🔒'}</span></div>`;
  let h=`<button class="nb" data-act="go" data-v="home">← رجوع</button><h2 style="margin-top:10px">${esc(c.title)}</h2><p class="m" style="margin-bottom:12px">${esc(c.description)}</p>`;
  chs.forEach((ch,ci)=>{
   const cl=ls.filter(l=>l.chapter_id===ch.id),own=canCh(ch.id),pl=plans.find(p=>p.active&&p.chapter_id===ch.id);
@@ -322,7 +330,70 @@ async function lessonView(id){
  const back=`<button class="nb" data-act="course" data-id="${esc(l.course_id)}">← رجوع للكورس</button><h2 style="margin-top:10px">${esc(l.title)}</h2>`;
  if(!data)return m.innerHTML=back+'<div class="card ban">🔒 هذا الدرس للمشتركين فقط. <a class="lnk" data-act="go" data-v="plans">اعرض باقات الاشتراك</a></div>';
  const e=embed(data.video_url);
- m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'');
+ m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'')+'<div id="qz" style="margin-top:14px"></div>';
+ loadQuiz(id);
+}
+
+/* ---------- اختبار الدرس ---------- */
+let qz=null;
+const shuf=a=>{const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]]}return r};
+const shufNot=a=>{let r,n=0;do{r=shuf(a);n++}while(a.length>1&&n<6&&r.every((v,i)=>v===a[i]));return r};
+const fillParts=p=>{const out=[],re=/\[\[(.+?)\]\]/g;let last=0,m;while((m=re.exec(p))){out.push({t:p.slice(last,m.index)});out.push({a:m[1].split('|').map(x=>x.trim()).filter(Boolean)});last=re.lastIndex}out.push({t:p.slice(last)});return out};
+function qReset(){const z=qz,q=z.qs[z.i];z.sel=q&&q.type==='multi'?[]:null;z.ord=[];z.checked=false;z.ok=false;z.ans=null;z.fok=[]}
+async function loadQuiz(lid){
+ const r=await sb.from('lesson_questions').select('*').eq('lesson_id',lid).order('position');
+ const qs=r.data||[];if(!qs.length||!$('#qz'))return;
+ qz={lid,qs,i:0,score:0,done:false,intro:true,sh:{}};qReset();qRender();
+}
+function qBody(q,d,z){
+ const lock=z.checked,P=`<p style="font-size:1.05rem;white-space:pre-wrap;margin:8px 0">${esc(q.prompt)}</p>`;
+ if(q.type==='mcq'||q.type==='multi'){const mc=q.type==='multi',sel=z.sel,cor=mc?d.correct:[d.correct];
+  return P+d.options.map((o,i)=>{const on=mc?sel.includes(i):sel===i;let c=on?' on':'';if(lock){if(cor.includes(i))c=' ok';else if(on)c=' bad'}return`<button class="qo${c}" data-act="qsel" data-i="${i}" ${lock?'disabled':''}>${esc(o)}</button>`}).join('')}
+ if(q.type==='tf')return P+[[true,'✅ صح'],[false,'❌ خطأ']].map(([v,t])=>{let c=z.sel===v?' on':'';if(lock){if(d.correct===v)c=' ok';else if(z.sel===v)c=' bad'}return`<button class="qo${c}" data-act="qtfs" data-v="${v?1:0}" ${lock?'disabled':''}>${t}</button>`}).join('');
+ if(q.type==='fill'){const bank=d.mode==='bank';let n=0;
+  const opts=bank?(z.sh[q.id]||(z.sh[q.id]=shuf([...new Set(fillParts(q.prompt).filter(x=>x.a).map(x=>x.a[0]).concat(d.distractors||[]))]))):null;
+  return'<p style="font-size:1.05rem;line-height:2.5;margin:8px 0">'+fillParts(q.prompt).map(x=>{if(x.t!==undefined)return esc(x.t);const k=n++,v=z.ans?z.ans[k]||'':'',cls='fi'+(lock?(z.fok[k]?' okf':' badf'):'');
+   return bank?`<select class="${cls}" ${lock?'disabled':''}><option value="">—</option>${opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input class="${cls}" value="${esc(v)}" ${lock?'disabled':''}>`}).join('')+'</p>'}
+ if(q.type==='match'){const rights=z.sh[q.id]||(z.sh[q.id]=shuf([...new Set(d.pairs.map(p=>p[1]))]));
+  return P+d.pairs.map((p,i)=>{const v=z.ans?z.ans[i]||'':'',cls='ms'+(lock?(z.fok[i]?' okf':' badf'):'');
+   return`<div class="row" style="align-items:center;flex-wrap:nowrap"><span style="flex:1">${esc(p[0])}</span><select class="${cls}" style="flex:1" ${lock?'disabled':''}><option value="">اختر</option>${rights.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`}).join('')}
+ const sh=z.sh[q.id]||(z.sh[q.id]=shufNot(d.items.map((t,i)=>i)));
+ return P+`<div class="card" style="min-height:48px;margin:8px 0">${z.ord.length?z.ord.map((ix,k)=>`<div>${k+1}. ${esc(d.items[ix])}</div>`).join(''):'<span class="m">اضغط العناصر بالترتيب الصحيح</span>'}</div><div>`+sh.filter(ix=>!z.ord.includes(ix)).map(ix=>`<button class="qo" data-act="qord" data-i="${ix}" ${lock?'disabled':''}>${esc(d.items[ix])}</button>`).join('')+'</div>'+(lock?'':'<button class="btn sm gh" data-act="qundo">↩ تراجع</button><button class="btn sm gh" data-act="qclr">مسح</button>');
+}
+function qFeedback(q,d,z){
+ let ans='';
+ if(q.type==='mcq')ans=d.options[d.correct];
+ else if(q.type==='multi')ans=d.correct.map(i=>d.options[i]).join('، ');
+ else if(q.type==='tf')ans=d.correct?'صح':'خطأ';
+ else if(q.type==='fill')ans=fillParts(q.prompt).filter(x=>x.a).map(x=>x.a[0]).join('، ');
+ else if(q.type==='match')ans=d.pairs.map(p=>p[0]+' ← '+p[1]).join(' | ');
+ else ans=d.items.map((t,i)=>(i+1)+'. '+t).join(' ');
+ return`<div class="qres" style="border-color:${z.ok?'var(--ok,#34d399)':'#f87171'}"><b>${z.ok?'✅ إجابة صحيحة':'❌ إجابة غير صحيحة'}</b>${z.ok?'':`<p class="m">الإجابة الصحيحة: ${esc(ans)}</p>`}${q.explanation?`<p style="margin-top:6px;white-space:pre-wrap">💡 ${esc(q.explanation)}</p>`:''}</div><button class="btn" style="width:100%" data-act="qnext">${z.i+1<z.qs.length?'السؤال التالي ←':'عرض النتيجة'}</button>`;
+}
+function qRender(){
+ const h=$('#qz'),z=qz;if(!h||!z)return;
+ if(z.intro){const b=myRes[z.lid];h.innerHTML=`<div class="card" style="text-align:center"><h2>❓ اختبر نفسك</h2><p class="m">${z.qs.length} سؤال على هذا الدرس${b?' • أفضل نتيجة: '+b.score+'/'+b.total:''}</p><button class="btn" data-act="qstart">ابدأ الاختبار</button></div>`;return}
+ if(z.done){const pct=Math.round(z.score/z.qs.length*100);h.innerHTML=`<div class="card" style="text-align:center"><h2>${pct>=70?'🎉 ممتاز':'💪 حاول مرة أخرى'}</h2><div class="price" style="font-size:2rem;font-weight:700;color:var(--c)">${z.score} / ${z.qs.length}</div><div class="qbar"><i style="width:${pct}%"></i></div><button class="btn" data-act="qstart">إعادة الاختبار</button></div>`;return}
+ const q=z.qs[z.i],d=q.data||{};
+ h.innerHTML=`<div class="card"><div class="chh"><b>❓ سؤال ${z.i+1} من ${z.qs.length}</b><span class="m">${esc(QT[q.type]?QT[q.type].n:'')}</span></div><div class="qbar"><i style="width:${Math.round(z.i/z.qs.length*100)}%"></i></div>${qBody(q,d,z)}${z.checked?qFeedback(q,d,z):'<button class="btn" style="width:100%;margin-top:10px" data-act="qcheck">تحقق من الإجابة</button>'}</div>`;
+}
+function qGrade(){
+ const z=qz,q=z.qs[z.i],d=q.data||{};let ok=false;z.fok=[];
+ if(q.type==='mcq'){if(z.sel===null)return toast('اختر إجابة');ok=z.sel===d.correct}
+ else if(q.type==='multi'){if(!z.sel.length)return toast('اختر إجابة واحدة على الأقل');ok=z.sel.length===d.correct.length&&d.correct.every(i=>z.sel.includes(i))}
+ else if(q.type==='tf'){if(z.sel===null)return toast('اختر صح أو خطأ');ok=z.sel===d.correct}
+ else if(q.type==='fill'){const v=[...document.querySelectorAll('#qz .fi')].map(x=>x.value);if(!v.length||v.some(x=>!x.trim()))return toast('أكمل كل الفراغات');z.ans=v;const ps=fillParts(q.prompt).filter(x=>x.a);z.fok=ps.map((x,k)=>x.a.some(a=>norm(a)===norm(v[k])));ok=z.fok.every(Boolean)}
+ else if(q.type==='match'){const v=[...document.querySelectorAll('#qz .ms')].map(x=>x.value);if(!v.length||v.some(x=>!x))return toast('صل كل العناصر');z.ans=v;z.fok=d.pairs.map((p,i)=>v[i]===p[1]);ok=z.fok.every(Boolean)}
+ else{if(z.ord.length<d.items.length)return toast('رتّب كل العناصر');ok=z.ord.every((ix,k)=>d.items[ix]===d.items[k])}
+ z.ok=ok;z.checked=true;if(ok)z.score++;qRender();
+}
+function qNextQ(){
+ const z=qz;
+ if(z.i+1>=z.qs.length){z.done=true;
+  const best=Math.max(z.score,(myRes[z.lid]||{}).score||0);myRes[z.lid]={score:best,total:z.qs.length};
+  sb.from('quiz_results').upsert({student_id:me.id,lesson_id:z.lid,score:best,total:z.qs.length,updated_at:new Date().toISOString()}).then(()=>{},()=>{});
+  return qRender()}
+ z.i++;qReset();qRender();
 }
 
 /* مراجعة ذكية: نظام ليتنر للتكرار المتباعد (يعمل داخل المتصفح بدون API) */
@@ -412,26 +483,108 @@ async function setSub(id,date){
 }
 
 /* ===== لوحة المحتوى ===== */
+let cs={s:'tree'},qf=null,qcache=[];
+const QT={
+ mcq:{n:'اختيار من متعدد',i:'🔘',d:'سؤال له إجابة واحدة صحيحة من عدة خيارات',x:'ما أفضل وسيلة لتصوير الكسور؟'},
+ multi:{n:'اختيار أكثر من إجابة',i:'☑️',d:'أكثر من إجابة صحيحة والطالب يختارها كلها',x:'اختر كل ما يُستخدم في الأشعة التشخيصية'},
+ tf:{n:'صح أم خطأ',i:'✅',d:'عبارة يحكم الطالب عليها',x:'الأشعة السينية موجات صوتية'},
+ fill:{n:'أكمل الفراغ',i:'✍️',d:'جملة ينقصها كلمة يكتبها الطالب أو يختارها',x:'تُستخدم الأشعة السينية في تشخيص ____'},
+ match:{n:'وصل (مطابقة)',i:'🔗',d:'يصل الطالب كل عنصر بما يناسبه',x:'صل كل فحص بما يناسبه'},
+ order:{n:'ترتيب',i:'🔢',d:'يرتب الطالب العناصر بالترتيب الصحيح',x:'رتّب خطوات تصوير الصدر'}
+};
+const qDefault=t=>({mcq:{options:['','','',''],correct:0},multi:{options:['','','',''],correct:[]},tf:{correct:true},fill:{mode:'type',distractors:''},match:{pairs:[['',''],['','']]},order:{items:['','','']}})[t];
+const bk=(s,x)=>`<button class="nb" data-act="cgo" data-s="${s}" ${x||''}>← رجوع</button>`;
+const bt=(a,t,at,pri)=>`<button class="btn sm${pri?'':' gh'}" data-act="${a}" ${at||''}>${t}</button>`;
+function chOptsFor(cid,sel){return '<option value="">بدون شابتر</option>'+chapters.filter(x=>x.course_id===cid).map(x=>`<option value="${esc(x.id)}" ${x.id===sel?'selected':''}>${esc(chName(x.id))}</option>`).join('')}
 async function contentView(){
  panel='content';
  if(me.role!=='admin')return go('home');
- const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [c,l,f,ch]=await Promise.all([sb.from('courses').select('id,title').order('created_at'),sb.from('lessons').select('id,course_id,chapter_id,title,is_free').order('position'),sb.from('flashcards').select('id,front').order('front'),sb.from('chapters').select('*').order('position')]);
- const cs=c.data||[],ls=l.data||[],fl=f.data||[];chapters=ch.data||[];
- const opts=cs.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('');
- const cn=id=>(cs.find(x=>x.id===id)||{}).title||'';
- const chOpts=none=>`<option value="">${none}</option>`+chapters.map(x=>`<option value="${esc(x.id)}">${esc(cn(x.course_id))} — ${esc(chName(x.id))}</option>`).join('');
- const row=(t,b)=>`<div class="li" style="cursor:default"><span>${t}</span><span>${b}</span></div>`;
- const del=(a,id)=>`<button class="btn sm gh" data-act="${a}" data-id="${esc(id)}">حذف</button>`;
- m.innerHTML=`<div class="card"><h2>إضافة محتوى</h2>
- <b>كورس جديد</b><input id="ct" placeholder="عنوان الكورس"><input id="cd" placeholder="وصف مختصر"><input id="cu" placeholder="رابط صورة الغلاف (اختياري)" dir="ltr"><button class="btn sm" data-act="addc">حفظ الكورس</button><hr style="border-color:var(--b);margin:12px 0">
- <b>شابتر جديد</b><p class="m">يُنشأ له باقة تلقائياً، وتحدد سعرها من تبويب «الموقع».</p><select id="chc">${opts}</select><input id="cht" placeholder="اسم الشابتر"><button class="btn sm" data-act="addch">حفظ الشابتر</button><hr style="border-color:var(--b);margin:12px 0">
- <b>درس جديد</b><select id="lc">${opts}</select><select id="lch">${chOpts('بدون شابتر (حسب الكورس فقط)')}</select><input id="lt" placeholder="عنوان الدرس"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr"><textarea id="ln" rows="3" placeholder="ملاحظات الدرس"></textarea><label class="m"><input type="checkbox" id="lf" style="width:auto"> درس مجاني</label><br><button class="btn sm" data-act="addl">حفظ الدرس</button><hr style="border-color:var(--b);margin:12px 0">
- <b>بطاقة مراجعة</b><select id="fcid">${opts}</select><select id="fch">${chOpts('لكل المشتركين')}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn sm" data-act="addf">حفظ البطاقة</button></div>
- <div class="card" style="margin-top:14px"><h2>الكورسات (${cs.length})</h2>${cs.map(x=>row(esc(x.title),del('delc',x.id))).join('')||'<p class="m">لا توجد كورسات.</p>'}</div>
- <div class="card" style="margin-top:14px"><h2>الشابترات (${chapters.length})</h2>${chapters.map(x=>row(esc(cn(x.course_id))+' — '+esc(chName(x.id)),del('delch',x.id))).join('')||'<p class="m">لا توجد شابترات.</p>'}</div>
- <div class="card" style="margin-top:14px"><h2>الدروس (${ls.length})</h2>${ls.map(x=>row(esc(cn(x.course_id))+(x.chapter_id?' — '+esc(chName(x.chapter_id)):'')+' — '+esc(x.title),`<button class="btn sm gh" data-act="togfree" data-id="${esc(x.id)}" data-v="${x.is_free?1:0}">${x.is_free?'🆓 مجاني':'💰 مدفوع'}</button>`+del('dell',x.id))).join('')||'<p class="m">لا توجد دروس.</p>'}</div>
- <div class="card" style="margin-top:14px"><h2>بطاقات المراجعة (${fl.length})</h2>${fl.map(x=>row(esc(x.front),del('delf',x.id))).join('')||'<p class="m">لا توجد بطاقات.</p>'}</div>`;
+ const m=$('#main');
+ if(cs.s==='qform'&&qf)return qFormRender();
+ m.innerHTML='<p class="m">جاري التحميل...</p>';
+ const [c,ch,l]=await Promise.all([sb.from('courses').select('*').order('created_at'),sb.from('chapters').select('*').order('position'),sb.from('lessons').select('*').order('position')]);
+ courses=c.data||[];chapters=ch.data||[];lessons=l.data||[];
+ const S=cs.s||'tree';
+ if(S==='course')return courseForm(m);
+ if(S==='chapter')return chapterForm(m);
+ if(S==='lesson')return lessonForm(m);
+ if(S==='questions')return questionsScreen(m);
+ if(S==='qtype')return qTypeScreen(m);
+ if(S==='cards')return cardsScreen(m);
+ return treeScreen(m);
+}
+async function treeScreen(m){
+ const [q,md]=await Promise.all([sb.from('lesson_questions').select('id,lesson_id'),sb.from('lesson_media').select('lesson_id,video_url')]);
+ const qc={};(q.data||[]).forEach(x=>qc[x.lesson_id]=(qc[x.lesson_id]||0)+1);
+ const mc=new Set((md.data||[]).filter(x=>x.video_url).map(x=>x.lesson_id));
+ const lrow=(l,i)=>`<div class="li wr" style="cursor:default"><span>${i+1}. ${esc(l.title)} <span class="m">${l.is_free?'🆓 ':''}${mc.has(l.id)?'▶ ':''}${qc[l.id]?'❓'+qc[l.id]:''}</span></span><span class="acts">${bt('mv','↑',`data-t="lessons" data-id="${esc(l.id)}" data-d="-1"`)}${bt('mv','↓',`data-t="lessons" data-id="${esc(l.id)}" data-d="1"`)}${bt('cgo','❓ أسئلة',`data-s="questions" data-id="${esc(l.id)}"`,1)}${bt('cgo','✏️',`data-s="lesson" data-id="${esc(l.id)}"`)}${bt('dell','🗑',`data-id="${esc(l.id)}"`)}</span></div>`;
+ const cards=courses.map(c=>{
+  const chs=chapters.filter(x=>x.course_id===c.id),ls=lessons.filter(x=>x.course_id===c.id),loose=ls.filter(l=>!chs.some(x=>x.id===l.chapter_id));
+  return`<div class="card" style="margin-bottom:14px"><div class="chh"><b style="font-size:1.1rem">📚 ${esc(c.title)}</b><span class="acts">${bt('cgo','✏️',`data-s="course" data-id="${esc(c.id)}"`)}${bt('delc','🗑',`data-id="${esc(c.id)}"`)}</span></div>`+
+  chs.map((ch,ci)=>{const cl=ls.filter(l=>l.chapter_id===ch.id);return`<div style="margin-top:10px;border:1px solid var(--b);border-radius:12px;padding:8px"><div class="chh"><b>الشابتر ${ci+1}: ${esc(ch.title)}</b><span class="acts">${bt('mv','↑',`data-t="chapters" data-id="${esc(ch.id)}" data-d="-1"`)}${bt('mv','↓',`data-t="chapters" data-id="${esc(ch.id)}" data-d="1"`)}${bt('cgo','✏️',`data-s="chapter" data-id="${esc(ch.id)}"`)}${bt('delch','🗑',`data-id="${esc(ch.id)}"`)}</span></div>${cl.map(lrow).join('')||'<p class="m">لا توجد دروس في هذا الشابتر.</p>'}${bt('cgo','＋ درس في هذا الشابتر',`data-s="lesson" data-cid="${esc(c.id)}" data-chid="${esc(ch.id)}"`,1)}</div>`}).join('')+
+  (loose.length?`<div style="margin-top:10px"><b class="m">دروس بدون شابتر</b>${loose.map(lrow).join('')}</div>`:'')+
+  `<div style="margin-top:10px">${bt('cgo','＋ شابتر جديد',`data-s="chapter" data-cid="${esc(c.id)}"`,1)}${bt('cgo','＋ درس بدون شابتر',`data-s="lesson" data-cid="${esc(c.id)}"`)}</div></div>`}).join('');
+ m.innerHTML=`<div class="row" style="margin-bottom:12px">${bt('cgo','＋ كورس جديد','data-s="course"',1)}${bt('cgo','🃏 بطاقات المراجعة','data-s="cards"')}</div>`+(cards||'<div class="card">ابدأ بإنشاء أول كورس، ثم أضف الشابترات والدروس بداخله.</div>');
+}
+function courseForm(m){
+ const c=courses.find(x=>x.id===cs.id)||{};
+ m.innerHTML=`${bk('tree')}<div class="card" style="margin-top:12px"><h2>${c.id?'تعديل الكورس':'كورس جديد'}</h2><input id="ct" placeholder="عنوان الكورس" value="${esc(c.title)}"><input id="cd" placeholder="وصف مختصر" value="${esc(c.description)}"><input id="cu" placeholder="رابط صورة الغلاف (اختياري) https://" dir="ltr" value="${esc(c.cover_url)}"><button class="btn" data-act="savecourse" data-id="${esc(c.id||'')}">حفظ</button></div>`;
+}
+function chapterForm(m){
+ const ch=chapters.find(x=>x.id===cs.id)||{},cid=ch.course_id||cs.cid||'';
+ m.innerHTML=`${bk('tree')}<div class="card" style="margin-top:12px"><h2>${ch.id?'تعديل الشابتر':'شابتر جديد'}</h2>${ch.id?'':'<p class="m">يُنشأ له باقة تلقائياً، وتحدد سعرها من تبويب «الموقع».</p>'}<select id="chc">${courses.map(x=>`<option value="${esc(x.id)}" ${x.id===cid?'selected':''}>${esc(x.title)}</option>`).join('')}</select><input id="cht" placeholder="اسم الشابتر" value="${esc(ch.title)}"><button class="btn" data-act="savechap" data-id="${esc(ch.id||'')}">حفظ</button></div>`;
+}
+async function lessonForm(m){
+ const l=lessons.find(x=>x.id===cs.id)||{},cid=l.course_id||cs.cid||(courses[0]||{}).id||'',chid=l.chapter_id||cs.chid||'';
+ let md={};if(l.id){const r=await sb.from('lesson_media').select('*').eq('lesson_id',l.id).maybeSingle();md=r.data||{}}
+ m.innerHTML=`${bk('tree')}<div class="card" style="margin-top:12px"><h2>${l.id?'تعديل الدرس':'درس جديد'}</h2>
+ <label class="m">الكورس</label><select id="lc">${courses.map(x=>`<option value="${esc(x.id)}" ${x.id===cid?'selected':''}>${esc(x.title)}</option>`).join('')}</select>
+ <label class="m">الشابتر</label><select id="lch">${chOptsFor(cid,chid)}</select>
+ <input id="lt" placeholder="عنوان الدرس" value="${esc(l.title)}"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr" value="${esc(md.video_url)}"><textarea id="ln" rows="4" placeholder="ملاحظات الدرس">${esc(md.notes)}</textarea>
+ <label class="m"><input type="checkbox" id="lf" style="width:auto" ${l.is_free?'checked':''}> درس مجاني</label><br>
+ <button class="btn" data-act="savelesson" data-id="${esc(l.id||'')}">حفظ</button> <button class="btn gh" data-act="savelesson" data-id="${esc(l.id||'')}" data-next="q">حفظ ثم إضافة أسئلة</button></div>`;
+}
+async function questionsScreen(m){
+ const l=lessons.find(x=>x.id===cs.id);if(!l){cs={s:'tree'};return contentView()}
+ const r=await sb.from('lesson_questions').select('*').eq('lesson_id',l.id).order('position');qcache=r.data||[];
+ const prev=q=>esc(String(q.prompt).replace(/\[\[(.+?)\]\]/g,'____').slice(0,90));
+ m.innerHTML=`${bk('tree')}<h2 style="margin-top:10px">❓ أسئلة: ${esc(l.title)}</h2><p class="m">${qcache.length} سؤال</p><div class="card" style="margin-top:10px">`+
+ (qcache.map((q,i)=>`<div class="li wr" style="cursor:default"><span>${i+1}. ${QT[q.type]?QT[q.type].i:''} <span class="m">${esc(QT[q.type]?QT[q.type].n:q.type)}</span><br>${prev(q)}</span><span class="acts">${bt('mvq','↑',`data-id="${esc(q.id)}" data-d="-1"`)}${bt('mvq','↓',`data-id="${esc(q.id)}" data-d="1"`)}${bt('qedit','✏️',`data-id="${esc(q.id)}"`)}${bt('qdel','🗑',`data-id="${esc(q.id)}"`)}</span></div>`).join('')||'<p class="m">لا توجد أسئلة بعد.</p>')+
+ `</div><button class="btn" style="margin-top:12px;width:100%" data-act="cgo" data-s="qtype" data-id="${esc(l.id)}">＋ إضافة سؤال</button>`;
+}
+function qTypeScreen(m){
+ m.innerHTML=`${bk('questions',`data-id="${esc(cs.id)}"`)}<h2 style="margin-top:10px">اختر نموذج السؤال</h2><div class="grid" style="margin-top:8px">${Object.keys(QT).map(k=>`<div class="card qt" data-act="qnew" data-t="${k}"><span class="ic2">${QT[k].i}</span><div><b>${QT[k].n}</b><p class="m">${QT[k].d}</p><p class="m">مثال: ${QT[k].x}</p></div></div>`).join('')}</div>`;
+}
+async function cardsScreen(m){
+ const f=await sb.from('flashcards').select('id,front,chapter_id').order('front'),fl=f.data||[];
+ m.innerHTML=`${bk('tree')}<div class="card" style="margin-top:12px"><h2>🃏 بطاقة مراجعة جديدة</h2><select id="fcid">${courses.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('')}</select><select id="fch"><option value="">لكل المشتركين</option>${chapters.map(x=>`<option value="${esc(x.id)}">${esc(chName(x.id))}</option>`).join('')}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn" data-act="addf">حفظ البطاقة</button></div><div class="card" style="margin-top:14px"><h2>البطاقات (${fl.length})</h2>${fl.map(x=>`<div class="li" style="cursor:default"><span>${esc(x.front)}</span>${bt('delf','حذف',`data-id="${esc(x.id)}"`)}</div>`).join('')||'<p class="m">لا توجد بطاقات.</p>'}</div>`;
+}
+function qFormRender(){
+ const m=$('#main'),d=qf.d,t=qf.type,T=QT[t];
+ const lbl={mcq:'نص السؤال',multi:'نص السؤال',tf:'العبارة',fill:'الجملة (ضع الكلمة الناقصة بين [[ ]])',match:'التعليمات',order:'التعليمات'}[t];
+ const rw=(x)=>`<div class="row" style="flex-wrap:nowrap;align-items:center">${x}</div>`;
+ let body='';
+ if(t==='mcq'||t==='multi'){const mc=t==='multi';
+  body=`<p class="m">اضغط الدائرة لتحديد ${mc?'الإجابات الصحيحة':'الإجابة الصحيحة'}</p>`+d.options.map((o,i)=>{const on=mc?d.correct.includes(i):d.correct===i;return rw(`<button class="btn sm${on?'':' gh'}" data-act="qcor" data-i="${i}">${on?'✓':'○'}</button><input id="qo${i}" value="${esc(o)}" placeholder="الخيار ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)}).join('')+(d.options.length<6?'<button class="btn sm gh" data-act="qadd">＋ خيار</button>':'');
+ }else if(t==='tf')body=`<div class="row"><button class="btn sm${d.correct?'':' gh'}" data-act="qtf" data-v="1">✅ صح</button><button class="btn sm${d.correct?' gh':''}" data-act="qtf" data-v="0">❌ خطأ</button></div><p class="m">الإجابة الصحيحة: ${d.correct?'صح':'خطأ'}</p>`;
+ else if(t==='fill')body=`<p class="m">مثال: تُستخدم الأشعة السينية في تشخيص [[الكسور]]. يمكنك وضع أكثر من فراغ، ومرادفات بعلامة | مثل [[الكسور|كسور]].</p><div class="row"><button class="btn sm${d.mode==='type'?'':' gh'}" data-act="qmode" data-v="type">يكتب الطالب الإجابة</button><button class="btn sm${d.mode==='bank'?'':' gh'}" data-act="qmode" data-v="bank">يختار من قائمة</button></div>`+(d.mode==='bank'?`<input id="qdis" value="${esc(d.distractors)}" placeholder="كلمات مشتتة إضافية (افصل بفاصلة)">`:'');
+ else if(t==='match')body='<p class="m">اكتب العنصر في الخانة الأولى وما يناسبه في الثانية.</p>'+d.pairs.map((p,i)=>rw(`<input id="qa${i}" value="${esc(p[0])}" placeholder="العنصر ${i+1}"><span>↔</span><input id="qb${i}" value="${esc(p[1])}" placeholder="ما يناسبه"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.pairs.length<6?'<button class="btn sm gh" data-act="qadd">＋ زوج</button>':'');
+ else body='<p class="m">اكتب العناصر بالترتيب الصحيح، وسيخلطها الموقع للطالب.</p>'+d.items.map((o,i)=>rw(`<b>${i+1}</b><input id="qo${i}" value="${esc(o)}" placeholder="العنصر ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.items.length<8?'<button class="btn sm gh" data-act="qadd">＋ عنصر</button>':'');
+ m.innerHTML=`${bk('questions',`data-id="${esc(qf.lesson_id)}"`)}<div class="card" style="margin-top:12px"><h2>${T.i} ${T.n}${qf.id?' (تعديل)':''}</h2><label class="m">${lbl}</label><textarea id="qp" rows="3">${esc(qf.prompt)}</textarea>${body}<label class="m">شرح الإجابة (اختياري، يظهر للطالب بعد الحل)</label><textarea id="qe" rows="2">${esc(qf.explanation)}</textarea><button class="btn" data-act="qsave">حفظ السؤال</button></div>`;
+}
+function syncQF(){
+ if(!qf||!$('#qp'))return;
+ qf.prompt=$('#qp').value;qf.explanation=($('#qe')||{}).value||'';
+ const d=qf.d,t=qf.type,g=id=>($('#'+id)||{}).value||'';
+ if(t==='mcq'||t==='multi')d.options=d.options.map((_,i)=>g('qo'+i));
+ if(t==='order')d.items=d.items.map((_,i)=>g('qo'+i));
+ if(t==='match')d.pairs=d.pairs.map((_,i)=>[g('qa'+i),g('qb'+i)]);
+ if(t==='fill'&&$('#qdis'))d.distractors=$('#qdis').value;
+}
+async function reorder(table,sib,id,d){
+ const k=sib.findIndex(x=>x.id===id),o=k+d;if(k<0||o<0||o>=sib.length)return;
+ const a=sib.slice();[a[k],a[o]]=[a[o],a[k]];
+ await Promise.all(a.map((x,i)=>sb.from(table).update({position:i+1}).eq('id',x.id)));
 }
 
 /* ===== لوحة الموقع ===== */
@@ -510,13 +663,70 @@ const act={
   setSub(p.id,ymd(d))},
  unsub:e=>confirm('إيقاف اشتراك هذا الطالب؟')&&setSub(e.dataset.id,null),
  msg:e=>openMsg(e.dataset.id),wa:()=>sendMsg('wa'),gm:()=>sendMsg('gmail'),cm:()=>{$('#modal').className=''},
- async addc(){if(!val('ct'))return toast('اكتب عنوان الكورس');const u=val('cu');if(u&&!/^https:\/\//.test(u))return toast('رابط الصورة يجب أن يبدأ بـ https://');
-  if(await ins('courses',{title:val('ct'),description:val('cd'),cover_url:u||null},'تم حفظ الكورس ✅'))adminView()},
- async addl(){const ch=chapters.find(x=>x.id===val('lch')),cid=ch?ch.course_id:val('lc');
-  if(!cid||!val('lt'))return toast('اختر الكورس واكتب العنوان');if(val('lv')&&!embed(val('lv')))return toast('رابط الفيديو غير صالح (https فقط)');
-  const {data,error}=await sb.from('lessons').insert({course_id:cid,chapter_id:ch?ch.id:null,title:val('lt'),is_free:$('#lf').checked,position:Date.now()%1e9}).select('id').single();
-  if(error)return toast('خطأ: '+error.message);
-  if(await ins('lesson_media',{lesson_id:data.id,video_url:val('lv')||null,notes:val('ln')||null},'تم حفظ الدرس ✅'))adminView()},
+ cgo(e){cs={s:e.dataset.s,id:e.dataset.id||null,cid:e.dataset.cid||null,chid:e.dataset.chid||null};qf=null;return contentView()},
+ async savecourse(e){const t=val('ct');if(!t)return toast('اكتب عنوان الكورس');const u=val('cu');if(u&&!/^https:\/\//.test(u))return toast('رابط الصورة يجب أن يبدأ بـ https://');
+  const row={title:t,description:val('cd'),cover_url:u||null},id=e.dataset.id;
+  const r=id?await sb.from('courses').update(row).eq('id',id):await sb.from('courses').insert(row);
+  if(r.error)return toast('خطأ: '+r.error.message);toast('تم الحفظ ✅');cs={s:'tree'};contentView()},
+ async savechap(e){const cid=val('chc'),t=val('cht'),id=e.dataset.id;if(!cid||!t)return toast('اختر الكورس واكتب اسم الشابتر');
+  if(id){const r=await sb.from('chapters').update({course_id:cid,title:t}).eq('id',id);if(r.error)return toast('خطأ: '+r.error.message);toast('تم الحفظ ✅')}
+  else{const pos=chapters.filter(x=>x.course_id===cid).length+1;
+   const {data,error}=await sb.from('chapters').insert({course_id:cid,title:t,position:pos}).select('id').single();if(error)return toast('خطأ: '+error.message);
+   await sb.from('plans').insert({title:'الشابتر '+pos+': '+t,months:1,price:0,currency:'ج.م',position:100+pos,active:false,chapter_id:data.id});
+   toast('تم حفظ الشابتر ✅ حدّد سعره من تبويب الموقع')}
+  cs={s:'tree'};contentView()},
+ async savelesson(e){const cid=val('lc'),t=val('lt');if(!cid||!t)return toast('اختر الكورس واكتب العنوان');
+  if(val('lv')&&!embed(val('lv')))return toast('رابط الفيديو غير صالح (https فقط)');
+  const row={course_id:cid,chapter_id:val('lch')||null,title:t,is_free:$('#lf').checked};let id=e.dataset.id;
+  if(id){const r=await sb.from('lessons').update(row).eq('id',id);if(r.error)return toast('خطأ: '+r.error.message)}
+  else{const {data,error}=await sb.from('lessons').insert(Object.assign(row,{position:Date.now()%1e9})).select('id').single();if(error)return toast('خطأ: '+error.message);id=data.id}
+  const r2=await sb.from('lesson_media').upsert({lesson_id:id,video_url:val('lv')||null,notes:val('ln')||null});
+  if(r2.error)return toast('خطأ: '+r2.error.message);toast('تم حفظ الدرس ✅');
+  cs=e.dataset.next==='q'?{s:'questions',id}:{s:'tree'};contentView()},
+ async mv(e){const t=e.dataset.t,id=e.dataset.id,L=t==='lessons'?lessons:chapters,it=L.find(x=>x.id===id);if(!it)return;
+  const sib=L.filter(x=>x.course_id===it.course_id&&(t==='chapters'||(x.chapter_id||null)===(it.chapter_id||null))).sort((a,b)=>a.position-b.position);
+  await reorder(t,sib,id,Number(e.dataset.d));contentView()},
+ async mvq(e){await reorder('lesson_questions',qcache,e.dataset.id,Number(e.dataset.d));contentView()},
+ qnew(e){const t=e.dataset.t;qf={id:null,lesson_id:cs.id,type:t,prompt:'',explanation:'',d:qDefault(t)};cs.s='qform';qFormRender()},
+ qedit(e){const q=qcache.find(x=>x.id===e.dataset.id);if(!q)return;const dd=q.data||{};let d;
+  if(q.type==='mcq')d={options:dd.options.slice(),correct:dd.correct};
+  else if(q.type==='multi')d={options:dd.options.slice(),correct:dd.correct.slice()};
+  else if(q.type==='tf')d={correct:!!dd.correct};
+  else if(q.type==='fill')d={mode:dd.mode||'type',distractors:(dd.distractors||[]).join('، ')};
+  else if(q.type==='match')d={pairs:dd.pairs.map(x=>x.slice())};
+  else d={items:dd.items.slice()};
+  qf={id:q.id,lesson_id:q.lesson_id,type:q.type,prompt:q.prompt,explanation:q.explanation||'',d};cs.s='qform';qFormRender()},
+ async qdel(e){if(!confirm('حذف هذا السؤال؟'))return;const r=await sb.from('lesson_questions').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');contentView()},
+ qcor(e){syncQF();const i=+e.dataset.i,d=qf.d;if(qf.type==='multi')d.correct=d.correct.includes(i)?d.correct.filter(x=>x!==i):d.correct.concat(i);else d.correct=i;qFormRender()},
+ qtf(e){syncQF();qf.d.correct=e.dataset.v==='1';qFormRender()},
+ qmode(e){syncQF();qf.d.mode=e.dataset.v;qFormRender()},
+ qadd(){syncQF();const d=qf.d,t=qf.type;if(t==='match')d.pairs.push(['','']);else if(t==='order')d.items.push('');else d.options.push('');qFormRender()},
+ qrm(e){syncQF();const i=+e.dataset.i,d=qf.d,t=qf.type;
+  if(t==='match'){if(d.pairs.length<=2)return toast('لا يقل عن زوجين');d.pairs.splice(i,1)}
+  else if(t==='order'){if(d.items.length<=2)return toast('لا يقل عن عنصرين');d.items.splice(i,1)}
+  else{if(d.options.length<=2)return toast('لا يقل عن خيارين');d.options.splice(i,1);
+   if(t==='multi')d.correct=d.correct.filter(x=>x!==i).map(x=>x>i?x-1:x);else d.correct=d.correct===i?0:(d.correct>i?d.correct-1:d.correct)}
+  qFormRender()},
+ async qsave(){syncQF();const t=qf.type,d=qf.d,p=qf.prompt.trim();if(!p)return toast('اكتب نص السؤال');let data;
+  if(t==='mcq'||t==='multi'){const idx=d.options.map((o,i)=>o.trim()?i:-1).filter(i=>i>=0);if(idx.length<2)return toast('أضف خيارين على الأقل');
+   const opts=idx.map(i=>d.options[i].trim());
+   if(t==='mcq'){const c=idx.indexOf(d.correct);if(c<0)return toast('حدد الإجابة الصحيحة');data={options:opts,correct:c}}
+   else{const c=idx.map((x,j)=>d.correct.includes(x)?j:-1).filter(j=>j>=0);if(!c.length)return toast('حدد إجابة صحيحة واحدة على الأقل');data={options:opts,correct:c}}}
+  else if(t==='tf')data={correct:!!d.correct};
+  else if(t==='fill'){if(!/\[\[.+?\]\]/.test(p))return toast('ضع الكلمة الناقصة بين [[ ]]');data={mode:d.mode,distractors:d.mode==='bank'?String(d.distractors||'').split(/[,،]/).map(x=>x.trim()).filter(Boolean):[]}}
+  else if(t==='match'){const pr=d.pairs.map(x=>[x[0].trim(),x[1].trim()]).filter(x=>x[0]&&x[1]);if(pr.length<2)return toast('أضف زوجين مكتملين على الأقل');data={pairs:pr}}
+  else{const it=d.items.map(x=>x.trim()).filter(Boolean);if(it.length<2)return toast('أضف عنصرين على الأقل');data={items:it}}
+  const row={lesson_id:qf.lesson_id,type:t,prompt:p,data,explanation:qf.explanation.trim()||null};
+  const r=qf.id?await sb.from('lesson_questions').update(row).eq('id',qf.id):await sb.from('lesson_questions').insert(Object.assign(row,{position:Date.now()%1e9}));
+  if(r.error)return toast('فشل الحفظ: '+r.error.message);toast('تم حفظ السؤال ✅');const lid=qf.lesson_id;qf=null;cs={s:'questions',id:lid};contentView()},
+ qstart(){const z=qz;z.intro=false;z.done=false;z.i=0;z.score=0;z.sh={};qReset();qRender()},
+ qsel(e){const z=qz,i=+e.dataset.i;if(z.checked)return;if(z.qs[z.i].type==='multi')z.sel=z.sel.includes(i)?z.sel.filter(x=>x!==i):z.sel.concat(i);else z.sel=i;qRender()},
+ qtfs(e){if(qz.checked)return;qz.sel=e.dataset.v==='1';qRender()},
+ qord(e){if(qz.checked)return;qz.ord.push(+e.dataset.i);qRender()},
+ qundo(){qz.ord.pop();qRender()},
+ qclr(){qz.ord=[];qRender()},
+ qcheck(){qGrade()},
+ qnext(){qNextQ()},
  async addadm(){const em=val('ae').toLowerCase();if(!em)return toast('اكتب بريد المشرف');
   const {data,error}=await sb.from('profiles').select('id,role').eq('email',em).maybeSingle();
   if(error)return toast('خطأ: '+error.message);
@@ -545,12 +755,6 @@ const act={
   await sb.from('sub_requests').update({status:'done'}).eq('id',q.id);toast('تم التفعيل ✅');membersView()},
  async grant(e){const cid=val('gs_'+e.dataset.id);if(!cid)return toast('اختر الشابتر');const r=await sb.from('enrollments').upsert({student_id:e.dataset.id,chapter_id:cid});if(r.error)return toast('فشل: '+r.error.message);toast('تم فتح الشابتر ✅');membersView()},
  async revch(e){if(!confirm('سحب هذا الشابتر من الطالب؟'))return;const r=await sb.from('enrollments').delete().eq('student_id',e.dataset.sid).eq('chapter_id',e.dataset.cid);if(r.error)return toast('فشل: '+r.error.message);toast('تم السحب');membersView()},
- async addch(){if(!val('chc')||!val('cht'))return toast('اختر الكورس واكتب اسم الشابتر');
-  const pos=chapters.filter(x=>x.course_id===val('chc')).length+1;
-  const {data,error}=await sb.from('chapters').insert({course_id:val('chc'),title:val('cht'),position:pos}).select('id').single();
-  if(error)return toast('خطأ: '+error.message);
-  await sb.from('plans').insert({title:'الشابتر '+pos+': '+val('cht'),months:1,price:0,currency:'ج.م',position:100+pos,active:false,chapter_id:data.id});
-  toast('تم حفظ الشابتر ✅ حدّد سعره من تبويب الموقع');adminView()},
  async delch(e){if(!confirm('حذف الشابتر وباقته؟ (دروسه تبقى بدون شابتر)'))return;const r=await sb.from('chapters').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
  async delc(e){if(!confirm('حذف الكورس وكل دروسه؟'))return;const r=await sb.from('courses').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
  async dell(e){if(!confirm('حذف هذا الدرس؟'))return;const r=await sb.from('lessons').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
@@ -574,7 +778,7 @@ const act={
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||!act[el.dataset.act])return;
  Promise.resolve(act[el.dataset.act](el)).catch(x=>toast('حدث خطأ: '+(x&&x.message||x)))});
 document.addEventListener('input',e=>{if(e.target.id==='q')draw(e.target.value);if(e.target.id==='sq')drawStudents();if((e.target.id||'').startsWith('w_'))wmPrev()});
-document.addEventListener('change',e=>{if(e.target.id==='sf')drawStudents()});
+document.addEventListener('change',e=>{if(e.target.id==='sf')drawStudents();if(e.target.id==='lc'&&$('#lch'))$('#lch').innerHTML=chOptsFor(e.target.value,'')});
 if(SUPABASE_URL.startsWith('PUT_'))authView('عدّل SUPABASE_URL و SUPABASE_KEY داخل index.html');else boot();
 </script>
 </body>
