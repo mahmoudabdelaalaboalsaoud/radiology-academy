@@ -257,7 +257,7 @@ function shell(){
  <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
 function go(v,id){
  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
- ({home:home,cards:cardsView,plans:plansView,admin:membersView,members:membersView,content:()=>{cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
+ ({home:home,cards:cardsView,plans:plansView,admin:()=>{ms.s='list';ms.id=null;return membersView()},members:()=>{ms.s='list';ms.id=null;return membersView()},content:()=>{cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
 }
 
 /* ---------- الطالب ---------- */
@@ -468,37 +468,73 @@ function subDate(p,k){
  return ymd(d)}
 
 /* ===== لوحة الأعضاء ===== */
+let ms={s:'list',id:null,f:'',lim:40,edit:false},mAdmins=[],mQR=[],mLs=[];
+function ago(d){if(!d)return 'لم يدخل';const m=Math.floor((Date.now()-new Date(d))/6e4);if(m<2)return 'الآن';if(m<60)return 'منذ '+m+' دقيقة';const h=Math.floor(m/60);if(h<24)return 'منذ '+h+' ساعة';const dd=Math.floor(h/24);return dd===1?'أمس':dd<30?'منذ '+dd+' يوم':new Date(d).toLocaleDateString('ar-EG')}
 async function membersView(){
  panel='members';
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
- const [s,a,r,pl,ch,en]=await Promise.all([
+ const det=ms.s==='detail'&&ms.id;
+ const [s,a,r,pl,ch,en,qr,ls]=await Promise.all([
   sb.from('profiles').select('*').eq('role','student').order('created_at',{ascending:false}),
   sb.from('profiles').select('id,full_name,email').eq('role','admin').order('created_at'),
   sb.from('sub_requests').select('*').eq('status','pending').order('created_at',{ascending:false}),
   sb.from('plans').select('*').order('position'),
   sb.from('chapters').select('*').order('position'),
-  sb.from('enrollments').select('*')]);
+  sb.from('enrollments').select('*'),
+  det?sb.from('quiz_results').select('*').eq('student_id',ms.id):Promise.resolve({data:[]}),
+  det?sb.from('lessons').select('id,title'):Promise.resolve({data:[]})]);
  students=s.data||[];reqs=r.data||[];plans=pl.data||[];chapters=ch.data||[];enr=en.data||[];
- const admins=a.data||[];
- const cnt={active:0,expiring:0,expired:0,none:0};students.forEach(p=>cnt[subState(p)]++);
- m.innerHTML=`<div class="stats"><div class="card"><b>${students.length}</b>الطلاب</div><div class="card"><b class="active">${new Set(enr.map(x=>x.student_id)).size}</b>اشتراك بشابتر</div><div class="card"><b class="active">${cnt.active+cnt.expiring}</b>اشتراك شامل</div><div class="card"><b class="expiring">${reqs.length}</b>طلبات اشتراك</div></div>
- <div class="card"><h2>الأعضاء</h2><div class="row"><input id="sq" placeholder="بحث بالاسم أو الهاتف أو الإيميل"><select id="sf"><option value="">الكل</option><option value="req">لديهم طلب اشتراك</option><option value="has">لديهم شابتر مفتوح</option><option value="none">بدون أي اشتراك</option></select></div><div class="tw" id="st"></div></div>
+ mAdmins=a.data||[];mQR=qr.data||[];mLs=ls.data||[];
+ if(ms.s==='detail'&&!students.find(x=>x.id===ms.id))ms.s='list';
+ if(ms.s==='detail')return memberDetail(m);
+ memberList(m);
+}
+function memberList(m){
+ m.innerHTML=`<div id="mchips" class="row" style="margin-bottom:10px"></div>
+ <div class="row" style="margin-bottom:6px"><input id="sq" placeholder="🔍 بحث بالاسم أو الهاتف أو الإيميل" style="flex:2;min-width:160px"><select id="sf" style="flex:1;min-width:120px"><option value="new">الأحدث تسجيلاً</option><option value="seen">آخر ظهور</option><option value="name">الاسم</option></select></div>
+ <div class="row" style="margin-bottom:10px">${bt('mcsv','⬇ تصدير الأعضاء (CSV)')}</div>
+ <div id="mreq"></div><div id="mlist"></div>
  <div class="card" style="margin-top:14px"><h2>المشرفون</h2><p class="m">اطلب من الشخص تسجيل حساب جديد في الموقع أولاً، ثم اكتب بريده هنا.</p>
  <div class="row"><input id="ae" type="email" placeholder="بريد المشرف الجديد" dir="ltr"><button class="btn sm" data-act="addadm">إضافة مشرف</button></div>
- <div class="tw"><table>${admins.map(x=>`<tr><td>${esc(x.full_name||'-')}<br><span class="m" dir="ltr">${esc(x.email||'')}</span></td><td>${x.id===me.id?'<span class="m">أنت</span>':`<button class="btn sm gh" data-act="rmadm" data-id="${esc(x.id)}">إزالة</button>`}</td></tr>`).join('')}</table></div></div>`;
+ <div class="tw"><table>${mAdmins.map(x=>`<tr><td>${esc(x.full_name||'-')}<br><span class="m" dir="ltr">${esc(x.email||'')}</span></td><td>${x.id===me.id?'<span class="m">أنت</span>':`<button class="btn sm gh" data-act="rmadm" data-id="${esc(x.id)}">إزالة</button>`}</td></tr>`).join('')}</table></div></div>`;
  drawStudents();
 }
-function drawStudents(){
- const q=norm(($('#sq')||{}).value),f=($('#sf')||{}).value;
- const opts=chapters.map(c=>`<option value="${esc(c.id)}">${esc(chName(c.id))}</option>`).join('');
- const L=students.filter(p=>(!f||(f==='req'?reqsOf(p.id).length:f==='has'?enrOf(p.id).length:(!enrOf(p.id).length&&subState(p)==='none')))&&(!q||norm((p.full_name||'')+(p.phone||'')+(p.email||'')).includes(q)));
- $('#st').innerHTML=L.length?`<table><tr><th>الطالب</th><th>الشابترات</th><th>اشتراك شامل</th><th>مراسلة</th></tr>`+L.map(p=>{const s=subState(p);
-  const own=enrOf(p.id).map(x=>`<span class="chip active">${esc(chName(x.chapter_id))} <a class="lnk" data-act="revch" data-sid="${esc(p.id)}" data-cid="${esc(x.chapter_id)}">✕</a></span>`).join(' ');
-  const pend=reqsOf(p.id).map(r=>`<div style="margin-top:6px">⏳ ${esc(r.plan_title||'')} <button class="btn sm" data-act="approve" data-rid="${esc(r.id)}">✅ تفعيل</button></div>`).join('');
-  const grant=chapters.length?`<div style="margin-top:6px"><select id="gs_${esc(p.id)}" style="width:auto;max-width:150px;padding:6px">${opts}</select> <button class="btn sm gh" data-act="grant" data-id="${esc(p.id)}">منح</button></div>`:'';
-  return`<tr><td>${esc(p.full_name||'-')}<br><span class="m">${esc(p.phone||'')}</span></td><td>${own||'<span class="m">لا يوجد</span>'}${pend}${grant}</td><td><span class="chip ${s}">${LBL[s]}</span><br><span class="m">${esc(p.sub_until||'')}</span><br>${[1,3,6,12].map(k=>`<button class="btn sm" data-act="sub" data-id="${esc(p.id)}" data-k="${k}">+${k}ش</button>`).join('')}<button class="btn sm gh" data-act="unsub" data-id="${esc(p.id)}">إيقاف</button></td><td><button class="btn sm" data-act="msg" data-id="${esc(p.id)}">✉ رسالة</button></td></tr>`}).join('')+'</table>':'<p class="m">لا يوجد أعضاء.</p>';
+const isGlob=p=>['active','expiring'].includes(subState(p));
+function memberCard(p){
+ const s=subState(p),own=enrOf(p.id).length,rq=reqsOf(p.id).length;
+ return`<div class="card mc" data-act="mopen" data-id="${esc(p.id)}" style="margin-bottom:10px;cursor:pointer"><div class="chh"><b>${esc(p.full_name||'-')}</b><span class="acts">${rq?`<span class="chip expiring">⏳ ${rq} طلب</span>`:''}<span class="chip ${s}">${LBL[s]}</span></span></div><p class="m" dir="auto">${esc(p.phone||'-')} • ${esc(p.email||'')}</p><p class="m">📚 ${own} شابتر مفتوح • آخر ظهور: ${esc(ago(p.last_seen))}</p></div>`;
 }
+function drawStudents(){
+ if(!$('#mlist'))return;
+ const F=[['','الكل',students.length],['req','طلبات اشتراك',students.filter(p=>reqsOf(p.id).length).length],['has','شابتر مفتوح',students.filter(p=>enrOf(p.id).length).length],['glob','اشتراك شامل',students.filter(isGlob).length],['none','بدون اشتراك',students.filter(p=>!enrOf(p.id).length&&!isGlob(p)).length]];
+ $('#mchips').innerHTML=F.map(([k,t,n])=>`<button class="btn sm${ms.f===k?'':' gh'}" data-act="mfilter" data-f="${k}">${t} (${n})</button>`).join('');
+ const q=norm(($('#sq')||{}).value),so=($('#sf')||{}).value||'new';
+ const pass=p=>!ms.f||(ms.f==='req'?reqsOf(p.id).length:ms.f==='has'?enrOf(p.id).length:ms.f==='glob'?isGlob(p):(!enrOf(p.id).length&&!isGlob(p)));
+ const L=students.filter(p=>pass(p)&&(!q||norm((p.full_name||'')+(p.phone||'')+(p.email||'')).includes(q)));
+ if(so==='seen')L.sort((a,b)=>new Date(b.last_seen||0)-new Date(a.last_seen||0));
+ else if(so==='name')L.sort((a,b)=>String(a.full_name||'').localeCompare(String(b.full_name||''),'ar'));
+ const rs=students.filter(p=>reqsOf(p.id).length);
+ $('#mreq').innerHTML=(!ms.f&&!q&&rs.length)?`<div class="card ban"><h2>🔔 طلبات الاشتراك (${rs.length})</h2>`+rs.map(p=>{const rq=reqsOf(p.id),tot=rq.reduce((a,r)=>a+Number(r.price||0),0);return`<div class="li wr" style="cursor:default"><span><b>${esc(p.full_name||'-')}</b> <span class="m">${esc(p.phone||'')}</span><br><span class="m">${rq.map(r=>esc(r.plan_title||'')).join(' • ')}${tot?' — '+esc(tot.toLocaleString('en-US'))+' '+esc(cur$()):''}</span></span><span class="acts">${bt('approveall','✅ تفعيل الكل',`data-sid="${esc(p.id)}"`,1)}${bt('mopen','الملف',`data-id="${esc(p.id)}"`)}${bt('rejall','رفض',`data-sid="${esc(p.id)}"`)}</span></div>`}).join('')+'</div>':'';
+ const show=L.slice(0,ms.lim);
+ $('#mlist').innerHTML=(show.map(memberCard).join('')||'<p class="m">لا يوجد أعضاء مطابقون.</p>')+(L.length>show.length?`<button class="btn gh" style="width:100%" data-act="mmore">عرض المزيد (${L.length-show.length})</button>`:'');
+}
+function memberDetail(m){
+ const p=students.find(x=>x.id===ms.id),s=subState(p),own=enrOf(p.id),rq=reqsOf(p.id);
+ const ln=id=>(mLs.find(x=>x.id===id)||{}).title||'درس';
+ const wl=waNum(p.phone)?'https://wa.me/'+waNum(p.phone)+'?text='+encodeURIComponent('مرحباً '+(p.full_name||'')+' 👋'):'';
+ const opts=chapters.map(c=>`<option value="${esc(c.id)}">${esc(chName(c.id))}</option>`).join('');
+ m.innerHTML=`<button class="nb" data-act="mback">← رجوع للأعضاء</button>
+ <div class="card" style="margin-top:12px"><div class="chh"><b style="font-size:1.15rem">${esc(p.full_name||'-')}</b><span class="chip ${s}">${LBL[s]}</span></div>`+
+ (ms.edit?`<input id="en" value="${esc(p.full_name)}" placeholder="الاسم"><input id="ep" value="${esc(p.phone)}" placeholder="الهاتف" dir="ltr"><button class="btn sm" data-act="msave" data-id="${esc(p.id)}">حفظ</button><button class="btn sm gh" data-act="medit">إلغاء</button>`:
+ `<p class="m" dir="auto">📞 ${esc(p.phone||'-')}</p><p class="m" dir="ltr" style="text-align:right">✉ ${esc(p.email||'')}</p><p class="m">📅 سجّل: ${esc(p.created_at?new Date(p.created_at).toLocaleDateString('ar-EG'):'-')} • آخر ظهور: ${esc(ago(p.last_seen))}</p><div class="acts">${wl?`<a class="btn sm" style="text-decoration:none" href="${esc(wl)}" target="_blank" rel="noopener">💬 واتساب</a>`:''}${bt('msg','✉ رسالة جاهزة',`data-id="${esc(p.id)}"`)}${bt('medit','✏️ تعديل')}</div>`)+`</div>
+ <div class="card" style="margin-top:12px"><h2>الاشتراك الشامل</h2><p class="m">${LBL[s]}${p.sub_until?' • ينتهي '+esc(p.sub_until):''}</p><div class="acts">${[1,3,6,12].map(k=>bt('sub','+'+k+' ش',`data-id="${esc(p.id)}" data-k="${k}"`,1)).join('')}${bt('unsub','إيقاف',`data-id="${esc(p.id)}"`)}</div></div>
+ <div class="card" style="margin-top:12px"><h2>الشابترات</h2>${own.map(x=>`<span class="chip active">${esc(chName(x.chapter_id))} <a class="lnk" data-act="revch" data-sid="${esc(p.id)}" data-cid="${esc(x.chapter_id)}">✕</a></span>`).join(' ')||'<p class="m">لا توجد شابترات مفتوحة.</p>'}`+
+ (rq.length?'<h3 class="sh">طلبات معلّقة</h3>'+rq.map(r=>`<div class="li wr" style="cursor:default"><span>⏳ ${esc(r.plan_title||'')}</span><span class="acts">${bt('approve','✅ تفعيل',`data-rid="${esc(r.id)}"`,1)}${bt('rejreq','رفض',`data-rid="${esc(r.id)}"`)}</span></div>`).join(''):'')+
+ (chapters.length?`<div class="row" style="margin-top:8px;flex-wrap:nowrap"><select id="gs_${esc(p.id)}">${opts}</select>${bt('grant','منح',`data-id="${esc(p.id)}"`,1)}</div>`:'')+`</div>
+ <div class="card" style="margin-top:12px"><h2>نتائج الاختبارات</h2>${mQR.length?mQR.map(r=>`<div class="li" style="cursor:default"><span>${esc(ln(r.lesson_id))}</span><b>${esc(r.score)}/${esc(r.total)}</b></div>`).join(''):'<p class="m">لم يحل أي اختبار بعد.</p>'}</div>`;
+}
+
 async function setSub(id,date){
  const {error}=await sb.from('profiles').update({sub_until:date}).eq('id',id);
  if(error)return toast('فشل التحديث: '+error.message);
@@ -781,6 +817,24 @@ const act={
   const k=pl?pl.months:q.months;if(!confirm('تفعيل اشتراك شامل '+k+' شهر للطالب '+(p.full_name||'')+'؟'))return;
   const r2=await sb.from('profiles').update({sub_until:subDate(p,k)}).eq('id',p.id);if(r2.error)return toast('فشل: '+r2.error.message);
   await sb.from('sub_requests').update({status:'done'}).eq('id',q.id);toast('تم التفعيل ✅');membersView()},
+ mopen(e){ms.s='detail';ms.id=e.dataset.id;ms.edit=false;membersView()},
+ mback(){ms.s='list';ms.id=null;membersView()},
+ mfilter(e){ms.f=e.dataset.f;ms.lim=40;drawStudents()},
+ mmore(){ms.lim+=40;drawStudents()},
+ medit(){ms.edit=!ms.edit;memberDetail($('#main'))},
+ async msave(e){const n=val('en'),ph=val('ep').replace(/[^\d+]/g,'');if(!n)return toast('اكتب الاسم');
+  const r=await sb.from('profiles').update({full_name:n,phone:ph}).eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحفظ ✅');ms.edit=false;membersView()},
+ async approveall(e){const sid=e.dataset.sid,p=students.find(x=>x.id===sid);if(!p)return;
+  const rows=reqsOf(sid).map(q=>{const pl=planOf(q);return{q,cid:pl?pl.chapter_id:q.chapter_id}}).filter(x=>x.cid);
+  if(!rows.length)return toast('لا توجد طلبات شابترات، افتح الملف للتفعيل');
+  if(!confirm('فتح '+rows.length+' شابتر للطالب '+(p.full_name||'')+'؟'))return;
+  const r=await sb.from('enrollments').upsert(rows.map(x=>({student_id:sid,chapter_id:x.cid})));if(r.error)return toast('فشل: '+r.error.message);
+  await sb.from('sub_requests').update({status:'done'}).in('id',rows.map(x=>x.q.id));toast('تم التفعيل ✅');membersView()},
+ async rejreq(e){if(!confirm('رفض هذا الطلب؟'))return;await sb.from('sub_requests').delete().eq('id',e.dataset.rid);toast('تم الرفض');membersView()},
+ async rejall(e){if(!confirm('رفض كل طلبات هذا الطالب؟'))return;await sb.from('sub_requests').delete().eq('student_id',e.dataset.sid).eq('status','pending');toast('تم الرفض');membersView()},
+ mcsv(){const q=v=>{let t=String(v==null?'':v);if(/^[=+\-@]/.test(t))t="'"+t;return'"'+t.replace(/"/g,'""')+'"'};
+  const rows=[['الاسم','الهاتف','البريد','تاريخ التسجيل','آخر ظهور','الاشتراك الشامل','ينتهي في','الشابترات المفتوحة']].concat(students.map(p=>[p.full_name,p.phone,p.email,(p.created_at||'').slice(0,10),(p.last_seen||'').slice(0,10),LBL[subState(p)],p.sub_until||'',enrOf(p.id).map(x=>chName(x.chapter_id)).join(' | ')]));
+  try{const b=new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='members.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);toast('تم تجهيز الملف')}catch(x){toast('تعذر التصدير')}},
  async grant(e){const cid=val('gs_'+e.dataset.id);if(!cid)return toast('اختر الشابتر');const r=await sb.from('enrollments').upsert({student_id:e.dataset.id,chapter_id:cid});if(r.error)return toast('فشل: '+r.error.message);toast('تم فتح الشابتر ✅');membersView()},
  async revch(e){if(!confirm('سحب هذا الشابتر من الطالب؟'))return;const r=await sb.from('enrollments').delete().eq('student_id',e.dataset.sid).eq('chapter_id',e.dataset.cid);if(r.error)return toast('فشل: '+r.error.message);toast('تم السحب');membersView()},
  async delch(e){if(!confirm('حذف الشابتر وباقته؟ (دروسه تبقى بدون شابتر)'))return;const r=await sb.from('chapters').delete().eq('id',e.dataset.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');adminView()},
