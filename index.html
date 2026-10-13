@@ -111,6 +111,8 @@ h3.sh{margin:14px 0 8px;font-size:1rem;color:var(--c)}
 audio{width:100%;margin-top:6px}
 .recdot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#f87171;animation:rp 1s infinite;vertical-align:middle}
 @keyframes rp{50%{opacity:.25}}
+#upd{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px 12px;background:linear-gradient(90deg,var(--c2),var(--c));color:#04101c;font-weight:600}
+#upd .btn{background:#04101c;color:var(--c);margin:0}
 </style>
 </head>
 <body>
@@ -124,6 +126,7 @@ audio{width:100%;margin-top:6px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 /* ===== الإعدادات: ضع بيانات مشروعك من Supabase > Project Settings > API ===== */
+const APP_VER=10;
 const SUPABASE_URL='https://eqwwxbxavmbkelsuwxue.supabase.co';
 const SUPABASE_KEY='sb_publishable_4ROXzU2swID-vbEDDd3G9A_9G2CyjPs';
 let TEACHER='';
@@ -169,7 +172,25 @@ function popShow(force){
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!stand()){document.body.classList.add('canin');setTimeout(()=>popShow(false),2500)}});
 window.addEventListener('appinstalled',()=>{dip=null;popHide(false);document.body.classList.remove('canin');toast('تم تثبيت التطبيق ✅')});
 if(isIOS&&!stand()){document.body.classList.add('canin');setTimeout(()=>popShow(false),3500)}
-if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+
+/* ---------- فحص التحديثات ---------- */
+let lastChk=Date.now();
+function showUpd(){
+ if($('#upd'))return;
+ const d=document.createElement('div');d.id='upd';
+ d.innerHTML='🔄 يتوفر تحديث جديد للتطبيق <button class="btn sm" data-act="reload">تحديث الآن</button>';
+ document.body.appendChild(d);
+}
+async function chkUpdate(){
+ try{
+  const r=await fetch('/index.html',{cache:'no-cache'}),t=await r.text(),m=t.match(/const APP_VER=(\d+)/);
+  if(m&&Number(m[1])>APP_VER)showUpd();
+ }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastChk>12e4){lastChk=Date.now();chkUpdate()}});
+window.addEventListener('online',()=>chkUpdate());
+setTimeout(chkUpdate,4000);setInterval(chkUpdate,6e5);
 
 /* ---------- حماية المحتوى للأعضاء ---------- */
 const isP=()=>document.body.classList.contains('prot'),isIn=t=>/^(INPUT|TEXTAREA)$/.test((t&&t.tagName)||'');
@@ -257,7 +278,7 @@ function shell(){
  <button class="nb" data-act="go" data-v="cards" id="n-cards">مراجعة ذكية</button>
  ${adm?'<button class="nb" data-act="go" data-v="content" id="n-content">المحتوى</button><button class="nb" data-act="go" data-v="members" id="n-members">الأعضاء</button><button class="nb" data-act="go" data-v="site" id="n-site">الموقع</button>':'<button class="nb" data-act="go" data-v="plans" id="n-plans">الاشتراك</button>'}
  <button class="nb inst" data-act="install">📲 تثبيت</button>
- <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
+ <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main><footer class="m" style="text-align:center;padding:20px 0 70px;font-size:.75rem">إصدار التطبيق ${APP_VER}</footer>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
 function go(v,id){
  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
  ({home:home,cards:cardsView,plans:plansView,admin:()=>{ms.s='list';ms.id=null;return membersView()},members:()=>{ms.s='list';ms.id=null;return membersView()},content:()=>{recCancel();cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
@@ -616,7 +637,7 @@ async function lessonForm(m){
  <label class="m">الشابتر</label><select id="lch">${chOptsFor(cid,chid)}</select>
  <input id="lt" placeholder="عنوان الدرس" value="${esc(l.title)}"><input id="lv" placeholder="رابط الفيديو (يوتيوب أو Stream) https://" dir="ltr" value="${esc(md.video_url)}"><textarea id="ln" rows="4" placeholder="ملاحظات الدرس">${esc(md.notes)}</textarea>
  <label class="m"><input type="checkbox" id="lf" style="width:auto" ${l.is_free?'checked':''}> درس مجاني</label><br>
- <button class="btn" data-act="savelesson" data-id="${esc(l.id||'')}">حفظ</button> <button class="btn gh" data-act="savelesson" data-id="${esc(l.id||'')}" data-next="q">حفظ ثم إضافة أسئلة</button></div>`;
+ <button class="btn" data-act="savelesson" data-id="${esc(l.id||'')}">حفظ</button> <button class="btn gh" data-act="savelesson" data-id="${esc(l.id||'')}" data-next="q">حفظ ثم إضافة أسئلة</button> <button class="btn gh" data-act="savelesson" data-id="${esc(l.id||'')}" data-next="a">حفظ ثم تسجيل صوتي</button></div>`;
 }
 async function questionsScreen(m){
  const l=lessons.find(x=>x.id===cs.id);if(!l){cs={s:'tree'};return contentView()}
@@ -767,6 +788,7 @@ const act={
   if(r.error)return toast(r.error.message);
   if(r.data.session)boot();else authView('تم إنشاء الحساب، تحقق من بريدك لتأكيده ثم سجّل الدخول')},
  async google(){const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});if(r.error)toast(r.error.message)},
+ async reload(){try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}location.reload()},
  install(){if(dip||isIOS)popShow(true);else toast('افتح قائمة المتصفح ثم اختر «تثبيت التطبيق»')},
  popclose:()=>popHide(true),
  async doinst(){if(!dip)return popHide(false);popHide(false);dip.prompt();const r=await dip.userChoice;dip=null;if(r.outcome==='accepted')document.body.classList.remove('canin');else popHide(true)},
@@ -803,7 +825,7 @@ const act={
   else{const {data,error}=await sb.from('lessons').insert(Object.assign(row,{position:Date.now()%1e9})).select('id').single();if(error)return toast('خطأ: '+error.message);id=data.id}
   const r2=await sb.from('lesson_media').upsert({lesson_id:id,video_url:val('lv')||null,notes:val('ln')||null});
   if(r2.error)return toast('خطأ: '+r2.error.message);toast('تم حفظ الدرس ✅');
-  cs=e.dataset.next==='q'?{s:'questions',id}:{s:'tree'};contentView()},
+  cs=e.dataset.next==='q'?{s:'questions',id}:e.dataset.next==='a'?{s:'audio',id}:{s:'tree'};contentView()},
  async mv(e){const t=e.dataset.t,id=e.dataset.id,L=t==='lessons'?lessons:chapters,it=L.find(x=>x.id===id);if(!it)return;
   const sib=L.filter(x=>x.course_id===it.course_id&&(t==='chapters'||(x.chapter_id||null)===(it.chapter_id||null))).sort((a,b)=>a.position-b.position);
   await reorder(t,sib,id,Number(e.dataset.d));contentView()},
