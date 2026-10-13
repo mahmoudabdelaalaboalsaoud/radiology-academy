@@ -108,6 +108,9 @@ h3.sh{margin:14px 0 8px;font-size:1rem;color:var(--c)}
 .qbar{height:6px;border-radius:99px;background:var(--b);overflow:hidden;margin:8px 0}.qbar i{display:block;height:100%;background:linear-gradient(90deg,var(--c2),var(--c))}
 .sbar{position:fixed;left:0;right:0;bottom:0;z-index:18;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:rgba(8,18,34,.97);border-top:1px solid var(--c);box-shadow:0 -8px 30px rgba(0,0,0,.5)}
 .sbar .btn{margin:0;background:#25d366;color:#04101c;text-decoration:none;display:inline-block;text-align:center}
+audio{width:100%;margin-top:6px}
+.recdot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#f87171;animation:rp 1s infinite;vertical-align:middle}
+@keyframes rp{50%{opacity:.25}}
 </style>
 </head>
 <body>
@@ -257,7 +260,7 @@ function shell(){
  <button class="nb" data-act="out">خروج</button></nav></header><main id="main"></main>${lk?`<a class="fab" href="${esc(lk)}" target="_blank" rel="noopener" aria-label="واتساب">${WAI}</a>`:''}`}
 function go(v,id){
  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.id==='n-'+v));
- ({home:home,cards:cardsView,plans:plansView,admin:()=>{ms.s='list';ms.id=null;return membersView()},members:()=>{ms.s='list';ms.id=null;return membersView()},content:()=>{cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
+ ({home:home,cards:cardsView,plans:plansView,admin:()=>{ms.s='list';ms.id=null;return membersView()},members:()=>{ms.s='list';ms.id=null;return membersView()},content:()=>{recCancel();cs={s:'tree'};qf=null;return contentView()},site:siteView,course:()=>courseView(id),lesson:()=>lessonView(id)})[v]();
 }
 
 /* ---------- الطالب ---------- */
@@ -354,8 +357,8 @@ async function lessonView(id){
  const back=`<button class="nb" data-act="course" data-id="${esc(l.course_id)}">← رجوع للكورس</button><h2 style="margin-top:10px">${esc(l.title)}</h2>`;
  if(!data)return m.innerHTML=back+'<div class="card ban">🔒 هذا الدرس للمشتركين فقط. <a class="lnk" data-act="course" data-id="'+esc(l.course_id)+'">ارجع للكورس واختر الشابتر للاشتراك</a></div>';
  const e=embed(data.video_url);
- m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'')+'<div id="qz" style="margin-top:14px"></div>';
- loadQuiz(id);
+ m.innerHTML=back+(e?`<div class="vid"><iframe src="${esc(e)}" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`:'')+(data.notes?`<div class="card" style="margin-top:12px;white-space:pre-wrap">${esc(data.notes)}</div>`:'')+'<div id="au" style="margin-top:14px"></div><div id="qz" style="margin-top:14px"></div>';
+ loadAudio(id);loadQuiz(id);
 }
 
 /* ---------- اختبار الدرس ---------- */
@@ -364,6 +367,15 @@ const shuf=a=>{const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floo
 const shufNot=a=>{let r,n=0;do{r=shuf(a);n++}while(a.length>1&&n<6&&r.every((v,i)=>v===a[i]));return r};
 const fillParts=p=>{const out=[],re=/\[\[(.+?)\]\]/g;let last=0,m;while((m=re.exec(p))){out.push({t:p.slice(last,m.index)});out.push({a:m[1].split('|').map(x=>x.trim()).filter(Boolean)});last=re.lastIndex}out.push({t:p.slice(last)});return out};
 function qReset(){const z=qz,q=z.qs[z.i];z.sel=q&&q.type==='multi'?[]:null;z.ord=[];z.checked=false;z.ok=false;z.ans=null;z.fok=[]}
+async function loadAudio(lid){
+ if(!$('#au'))return;
+ const r=await sb.from('lesson_audio').select('*').eq('lesson_id',lid).order('position');
+ const L=r.data||[];if(!L.length)return;
+ const u=await sb.storage.from('lesson-audio').createSignedUrls(L.map(x=>x.path),3600);
+ const mp={};(u.data||[]).forEach(x=>{if(x.signedUrl)mp[x.path]=x.signedUrl});
+ const h=$('#au');if(!h)return;
+ h.innerHTML='<div class="card"><h2>🎧 الشرح الصوتي</h2>'+L.map(x=>mp[x.path]?`<div style="margin:10px 0"><b>${esc(x.title||'تسجيل صوتي')}</b><audio controls controlsList="nodownload" preload="none" src="${esc(mp[x.path])}"></audio></div>`:'').join('')+'</div>';
+}
 async function loadQuiz(lid){
  const r=await sb.from('lesson_questions').select('*').eq('lesson_id',lid).order('position');
  const qs=r.data||[];if(!qs.length||!$('#qz'))return;
@@ -571,13 +583,15 @@ async function contentView(){
  if(S==='questions')return questionsScreen(m);
  if(S==='qtype')return qTypeScreen(m);
  if(S==='cards')return cardsScreen(m);
+ if(S==='audio')return audioScreen(m);
  return treeScreen(m);
 }
 async function treeScreen(m){
- const [q,md]=await Promise.all([sb.from('lesson_questions').select('id,lesson_id'),sb.from('lesson_media').select('lesson_id,video_url')]);
+ const [q,md,au]=await Promise.all([sb.from('lesson_questions').select('id,lesson_id'),sb.from('lesson_media').select('lesson_id,video_url'),sb.from('lesson_audio').select('id,lesson_id')]);
+ const ac={};(au.data||[]).forEach(x=>ac[x.lesson_id]=(ac[x.lesson_id]||0)+1);
  const qc={};(q.data||[]).forEach(x=>qc[x.lesson_id]=(qc[x.lesson_id]||0)+1);
  const mc=new Set((md.data||[]).filter(x=>x.video_url).map(x=>x.lesson_id));
- const lrow=(l,i)=>`<div class="li wr" style="cursor:default"><span>${i+1}. ${esc(l.title)} <span class="m">${l.is_free?'🆓 ':''}${mc.has(l.id)?'▶ ':''}${qc[l.id]?'❓'+qc[l.id]:''}</span></span><span class="acts">${bt('mv','↑',`data-t="lessons" data-id="${esc(l.id)}" data-d="-1"`)}${bt('mv','↓',`data-t="lessons" data-id="${esc(l.id)}" data-d="1"`)}${bt('cgo','❓ أسئلة',`data-s="questions" data-id="${esc(l.id)}"`,1)}${bt('cgo','✏️',`data-s="lesson" data-id="${esc(l.id)}"`)}${bt('dell','🗑',`data-id="${esc(l.id)}"`)}</span></div>`;
+ const lrow=(l,i)=>`<div class="li wr" style="cursor:default"><span>${i+1}. ${esc(l.title)} <span class="m">${l.is_free?'🆓 ':''}${mc.has(l.id)?'▶ ':''}${qc[l.id]?'❓'+qc[l.id]+' ':''}${ac[l.id]?'🎙'+ac[l.id]:''}</span></span><span class="acts">${bt('mv','↑',`data-t="lessons" data-id="${esc(l.id)}" data-d="-1"`)}${bt('mv','↓',`data-t="lessons" data-id="${esc(l.id)}" data-d="1"`)}${bt('cgo','❓ أسئلة',`data-s="questions" data-id="${esc(l.id)}"`,1)}${bt('cgo','🎙',`data-s="audio" data-id="${esc(l.id)}"`)}${bt('cgo','✏️',`data-s="lesson" data-id="${esc(l.id)}"`)}${bt('dell','🗑',`data-id="${esc(l.id)}"`)}</span></div>`;
  const cards=courses.map(c=>{
   const chs=chapters.filter(x=>x.course_id===c.id),ls=lessons.filter(x=>x.course_id===c.id),loose=ls.filter(l=>!chs.some(x=>x.id===l.chapter_id));
   return`<div class="card" style="margin-bottom:14px"><div class="chh"><b style="font-size:1.1rem">📚 ${esc(c.title)}</b><span class="acts">${bt('cgo','✏️',`data-s="course" data-id="${esc(c.id)}"`)}${bt('delc','🗑',`data-id="${esc(c.id)}"`)}</span></div>`+
@@ -618,6 +632,53 @@ function qTypeScreen(m){
 async function cardsScreen(m){
  const f=await sb.from('flashcards').select('id,front,chapter_id').order('front'),fl=f.data||[];
  m.innerHTML=`${bk('tree')}<div class="card" style="margin-top:12px"><h2>🃏 بطاقة مراجعة جديدة</h2><select id="fcid">${courses.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('')}</select><select id="fch"><option value="">لكل المشتركين</option>${chapters.map(x=>`<option value="${esc(x.id)}">${esc(chName(x.id))}</option>`).join('')}</select><input id="ff" placeholder="السؤال"><input id="fb2" placeholder="الإجابة"><button class="btn" data-act="addf">حفظ البطاقة</button></div><div class="card" style="margin-top:14px"><h2>البطاقات (${fl.length})</h2>${fl.map(x=>`<div class="li" style="cursor:default"><span>${esc(x.front)}</span>${bt('delf','حذف',`data-id="${esc(x.id)}"`)}</div>`).join('')||'<p class="m">لا توجد بطاقات.</p>'}</div>`;
+}
+let rec=null,acache=[];
+function recCancel(){
+ if(!rec)return;
+ try{clearInterval(rec.tm);rec.stream.getTracks().forEach(t=>t.stop());if(rec.mr.state!=='inactive'){rec.mr.onstop=null;rec.mr.stop()}if(rec.url)URL.revokeObjectURL(rec.url)}catch(e){}
+ rec=null;
+}
+function recRender(){
+ const h=$('#recui');if(!h)return;
+ if(!rec)h.innerHTML='<button class="btn" data-act="arec">🎤 ابدأ التسجيل</button>';
+ else if(rec.st==='rec')h.innerHTML='<p style="margin:8px 0"><span class="recdot"></span> جاري التسجيل <b id="rt">00:00</b></p><button class="btn" data-act="astop">⏹ إيقاف</button>';
+ else h.innerHTML=`<audio controls src="${esc(rec.url)}"></audio><div style="margin-top:8px"><button class="btn sm" data-act="asave">💾 حفظ التسجيل</button><button class="btn sm gh" data-act="adiscard">🗑 إعادة</button></div>`;
+}
+async function recStart(){
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
+  const mt=(window.MediaRecorder&&types.find(t=>MediaRecorder.isTypeSupported(t)))||'';
+  const mr=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);
+  rec={mr,stream,chunks:[],t0:Date.now(),st:'rec',blob:null,url:null};
+  const me2=rec;
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)me2.chunks.push(e.data)};
+  mr.onstop=()=>{me2.stream.getTracks().forEach(t=>t.stop());clearInterval(me2.tm);me2.blob=new Blob(me2.chunks,{type:mr.mimeType||mt||'audio/webm'});me2.url=URL.createObjectURL(me2.blob);me2.st='done';recRender()};
+  mr.start(1000);
+  me2.tm=setInterval(()=>{const s=Math.floor((Date.now()-me2.t0)/1000),el=$('#rt');if(el)el.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},500);
+  recRender();
+ }catch(err){toast('تعذر تشغيل الميكروفون، اسمح للموقع باستخدامه من إعدادات المتصفح')}
+}
+async function upAudio(blob,ext,title,ct){
+ const lid=cs.id,path=lid+'/'+Date.now()+'.'+ext;
+ toast('جاري الرفع...');
+ const up=await sb.storage.from('lesson-audio').upload(path,blob,{contentType:ct,upsert:false});
+ if(up.error)return toast('فشل الرفع: '+up.error.message);
+ const r=await sb.from('lesson_audio').insert({lesson_id:lid,title:title,path,position:Date.now()%1e9});
+ if(r.error){await sb.storage.from('lesson-audio').remove([path]);return toast('خطأ: '+r.error.message)}
+ recCancel();toast('تم حفظ التسجيل ✅');contentView();
+}
+async function audioScreen(m){
+ const l=lessons.find(x=>x.id===cs.id);if(!l){cs={s:'tree'};return contentView()}
+ const r=await sb.from('lesson_audio').select('*').eq('lesson_id',l.id).order('position');
+ const list=r.data||[];acache=list;const urls={};
+ if(list.length){const u=await sb.storage.from('lesson-audio').createSignedUrls(list.map(x=>x.path),3600);(u.data||[]).forEach(x=>{if(x.signedUrl)urls[x.path]=x.signedUrl})}
+ m.innerHTML=`${bk('tree')}<h2 style="margin-top:10px">🎙 التسجيلات الصوتية: ${esc(l.title)}</h2>
+ <div class="card" style="margin-top:12px"><h2>تسجيل جديد</h2><input id="at" placeholder="عنوان التسجيل (مثال: شرح الدرس)"><div id="recui"></div>
+ <hr style="border-color:var(--b);margin:14px 0"><label class="m">أو ارفع ملفاً صوتياً من جهازك (حتى 50 ميجا)</label><input type="file" id="af" accept="audio/*"><button class="btn sm" data-act="aupload">⬆ رفع الملف</button></div>
+ <div class="card" style="margin-top:14px"><h2>التسجيلات (${list.length})</h2>${list.map(x=>`<div style="margin:12px 0;padding-bottom:10px;border-bottom:1px solid var(--b)"><div class="chh"><b>${esc(x.title||'تسجيل صوتي')}</b><span class="acts">${bt('mva','↑',`data-id="${esc(x.id)}" data-d="-1"`)}${bt('mva','↓',`data-id="${esc(x.id)}" data-d="1"`)}${bt('arename','✏️',`data-id="${esc(x.id)}"`)}${bt('adel','🗑',`data-id="${esc(x.id)}"`)}</span></div>${urls[x.path]?`<audio controls preload="none" src="${esc(urls[x.path])}"></audio>`:'<p class="m">تعذر تحميل المعاينة</p>'}</div>`).join('')||'<p class="m">لا توجد تسجيلات بعد.</p>'}</div>`;
+ recRender();
 }
 function qFormRender(){
  const m=$('#main'),d=qf.d,t=qf.type,T=QT[t];
@@ -723,7 +784,7 @@ const act={
   setSub(p.id,ymd(d))},
  unsub:e=>confirm('إيقاف اشتراك هذا الطالب؟')&&setSub(e.dataset.id,null),
  msg:e=>openMsg(e.dataset.id),wa:()=>sendMsg('wa'),gm:()=>sendMsg('gmail'),cm:()=>{$('#modal').className=''},
- cgo(e){cs={s:e.dataset.s,id:e.dataset.id||null,cid:e.dataset.cid||null,chid:e.dataset.chid||null};qf=null;return contentView()},
+ cgo(e){recCancel();cs={s:e.dataset.s,id:e.dataset.id||null,cid:e.dataset.cid||null,chid:e.dataset.chid||null};qf=null;return contentView()},
  async savecourse(e){const t=val('ct');if(!t)return toast('اكتب عنوان الكورس');const u=val('cu');if(u&&!/^https:\/\//.test(u))return toast('رابط الصورة يجب أن يبدأ بـ https://');
   const row={title:t,description:val('cd'),cover_url:u||null},id=e.dataset.id;
   const r=id?await sb.from('courses').update(row).eq('id',id):await sb.from('courses').insert(row);
@@ -746,6 +807,19 @@ const act={
  async mv(e){const t=e.dataset.t,id=e.dataset.id,L=t==='lessons'?lessons:chapters,it=L.find(x=>x.id===id);if(!it)return;
   const sib=L.filter(x=>x.course_id===it.course_id&&(t==='chapters'||(x.chapter_id||null)===(it.chapter_id||null))).sort((a,b)=>a.position-b.position);
   await reorder(t,sib,id,Number(e.dataset.d));contentView()},
+ arec(){recCancel();recStart()},
+ astop(){if(rec&&rec.mr.state==='recording')rec.mr.stop()},
+ adiscard(){recCancel();recRender()},
+ async asave(){if(!rec||!rec.blob)return;const t=rec.blob.type||'audio/webm';return upAudio(rec.blob,/mp4/.test(t)?'m4a':/ogg/.test(t)?'ogg':'webm',val('at')||'تسجيل صوتي',t.split(';')[0])},
+ async aupload(){const f=($('#af')||{}).files&&$('#af').files[0];if(!f)return toast('اختر ملفاً صوتياً أولاً');
+  if(f.size>50*1024*1024)return toast('الملف أكبر من 50 ميجا');
+  const ext=((f.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,''))||'mp3';
+  return upAudio(f,ext,val('at')||f.name.replace(/\.[^.]+$/,''),f.type||'audio/mpeg')},
+ async arename(e){const x=acache.find(a=>a.id===e.dataset.id);if(!x)return;const t=prompt('اسم التسجيل',x.title||'');if(t===null)return;
+  const r=await sb.from('lesson_audio').update({title:t.trim()||null}).eq('id',x.id);if(r.error)return toast('فشل: '+r.error.message);contentView()},
+ async adel(e){const x=acache.find(a=>a.id===e.dataset.id);if(!x||!confirm('حذف هذا التسجيل؟'))return;
+  await sb.storage.from('lesson-audio').remove([x.path]);const r=await sb.from('lesson_audio').delete().eq('id',x.id);if(r.error)return toast('فشل: '+r.error.message);toast('تم الحذف');contentView()},
+ async mva(e){await reorder('lesson_audio',acache,e.dataset.id,Number(e.dataset.d));contentView()},
  async mvq(e){await reorder('lesson_questions',qcache,e.dataset.id,Number(e.dataset.d));contentView()},
  qnew(e){const t=e.dataset.t;qf={id:null,lesson_id:cs.id,type:t,prompt:'',explanation:'',d:qDefault(t)};cs.s='qform';qFormRender()},
  qedit(e){const q=qcache.find(x=>x.id===e.dataset.id);if(!q)return;const dd=q.data||{};let d;
