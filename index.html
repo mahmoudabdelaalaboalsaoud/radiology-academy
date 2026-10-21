@@ -113,6 +113,11 @@ audio{width:100%;margin-top:6px}
 @keyframes rp{50%{opacity:.25}}
 #upd{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px 12px;background:linear-gradient(90deg,var(--c2),var(--c));color:#04101c;font-weight:600}
 #upd .btn{background:#04101c;color:var(--c);margin:0}
+.qr{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;margin:6px 0;max-width:100%}
+.qr>input,.qr>select{flex:1 1 0;min-width:0;width:auto;margin:0}
+.qr>.btn{flex:none;width:auto;min-width:42px;margin:0;padding:9px 12px}
+.qr>b,.qr>span{flex:none}
+main{min-width:0}
 </style>
 </head>
 <body>
@@ -126,7 +131,7 @@ audio{width:100%;margin-top:6px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 /* ===== الإعدادات: ضع بيانات مشروعك من Supabase > Project Settings > API ===== */
-const APP_VER=10;
+const APP_VER=11;
 const SUPABASE_URL='https://eqwwxbxavmbkelsuwxue.supabase.co';
 const SUPABASE_KEY='sb_publishable_4ROXzU2swID-vbEDDd3G9A_9G2CyjPs';
 let TEACHER='';
@@ -413,7 +418,7 @@ function qBody(q,d,z){
    return bank?`<select class="${cls}" ${lock?'disabled':''}><option value="">—</option>${opts.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input class="${cls}" value="${esc(v)}" ${lock?'disabled':''}>`}).join('')+'</p>'}
  if(q.type==='match'){const rights=z.sh[q.id]||(z.sh[q.id]=shuf([...new Set(d.pairs.map(p=>p[1]))]));
   return P+d.pairs.map((p,i)=>{const v=z.ans?z.ans[i]||'':'',cls='ms'+(lock?(z.fok[i]?' okf':' badf'):'');
-   return`<div class="row" style="align-items:center;flex-wrap:nowrap"><span style="flex:1">${esc(p[0])}</span><select class="${cls}" style="flex:1" ${lock?'disabled':''}><option value="">اختر</option>${rights.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`}).join('')}
+   return`<div class="qr"><span style="flex:1;min-width:0">${esc(p[0])}</span><select class="${cls}" ${lock?'disabled':''}><option value="">اختر</option>${rights.map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`}).join('')}
  const sh=z.sh[q.id]||(z.sh[q.id]=shufNot(d.items.map((t,i)=>i)));
  return P+`<div class="card" style="min-height:48px;margin:8px 0">${z.ord.length?z.ord.map((ix,k)=>`<div>${k+1}. ${esc(d.items[ix])}</div>`).join(''):'<span class="m">اضغط العناصر بالترتيب الصحيح</span>'}</div><div>`+sh.filter(ix=>!z.ord.includes(ix)).map(ix=>`<button class="qo" data-act="qord" data-i="${ix}" ${lock?'disabled':''}>${esc(d.items[ix])}</button>`).join('')+'</div>'+(lock?'':'<button class="btn sm gh" data-act="qundo">↩ تراجع</button><button class="btn sm gh" data-act="qclr">مسح</button>');
 }
@@ -505,6 +510,7 @@ let ms={s:'list',id:null,f:'',lim:40,edit:false},mAdmins=[],mQR=[],mLs=[];
 function ago(d){if(!d)return 'لم يدخل';const m=Math.floor((Date.now()-new Date(d))/6e4);if(m<2)return 'الآن';if(m<60)return 'منذ '+m+' دقيقة';const h=Math.floor(m/60);if(h<24)return 'منذ '+h+' ساعة';const dd=Math.floor(h/24);return dd===1?'أمس':dd<30?'منذ '+dd+' يوم':new Date(d).toLocaleDateString('ar-EG')}
 async function membersView(){
  panel='members';
+ if(ms.s!==lastM){lastM=ms.s;window.scrollTo&&window.scrollTo(0,0)}
  if(me.role!=='admin')return go('home');
  const m=$('#main');m.innerHTML='<p class="m">جاري التحميل...</p>';
  const det=ms.s==='detail'&&ms.id;
@@ -564,7 +570,7 @@ function memberDetail(m){
  <div class="card" style="margin-top:12px"><h2>الاشتراك الشامل</h2><p class="m">${LBL[s]}${p.sub_until?' • ينتهي '+esc(p.sub_until):''}</p><div class="acts">${[1,3,6,12].map(k=>bt('sub','+'+k+' ش',`data-id="${esc(p.id)}" data-k="${k}"`,1)).join('')}${bt('unsub','إيقاف',`data-id="${esc(p.id)}"`)}</div></div>
  <div class="card" style="margin-top:12px"><h2>الشابترات</h2>${own.map(x=>`<span class="chip active">${esc(chName(x.chapter_id))} <a class="lnk" data-act="revch" data-sid="${esc(p.id)}" data-cid="${esc(x.chapter_id)}">✕</a></span>`).join(' ')||'<p class="m">لا توجد شابترات مفتوحة.</p>'}`+
  (rq.length?'<h3 class="sh">طلبات معلّقة</h3>'+rq.map(r=>`<div class="li wr" style="cursor:default"><span>⏳ ${esc(r.plan_title||'')}</span><span class="acts">${bt('approve','✅ تفعيل',`data-rid="${esc(r.id)}"`,1)}${bt('rejreq','رفض',`data-rid="${esc(r.id)}"`)}</span></div>`).join(''):'')+
- (chapters.length?`<div class="row" style="margin-top:8px;flex-wrap:nowrap"><select id="gs_${esc(p.id)}">${opts}</select>${bt('grant','منح',`data-id="${esc(p.id)}"`,1)}</div>`:'')+`</div>
+ (chapters.length?`<div class="qr" style="margin-top:10px"><select id="gs_${esc(p.id)}">${opts}</select>${bt('grant','منح',`data-id="${esc(p.id)}"`,1)}</div>`:'')+`</div>
  <div class="card" style="margin-top:12px"><h2>نتائج الاختبارات</h2>${mQR.length?mQR.map(r=>`<div class="li" style="cursor:default"><span>${esc(ln(r.lesson_id))}</span><b>${esc(r.score)}/${esc(r.total)}</b></div>`).join(''):'<p class="m">لم يحل أي اختبار بعد.</p>'}</div>`;
 }
 
@@ -589,8 +595,10 @@ const qDefault=t=>({mcq:{options:['','','',''],correct:0},multi:{options:['','',
 const bk=(s,x)=>`<button class="nb" data-act="cgo" data-s="${s}" ${x||''}>← رجوع</button>`;
 const bt=(a,t,at,pri)=>`<button class="btn sm${pri?'':' gh'}" data-act="${a}" ${at||''}>${t}</button>`;
 function chOptsFor(cid,sel){return '<option value="">بدون شابتر</option>'+chapters.filter(x=>x.course_id===cid).map(x=>`<option value="${esc(x.id)}" ${x.id===sel?'selected':''}>${esc(chName(x.id))}</option>`).join('')}
+let lastS='',lastM='';
 async function contentView(){
  panel='content';
+ if(cs.s!==lastS){lastS=cs.s;window.scrollTo&&window.scrollTo(0,0)}
  if(me.role!=='admin')return go('home');
  const m=$('#main');
  if(cs.s==='qform'&&qf)return qFormRender();
@@ -645,7 +653,7 @@ async function questionsScreen(m){
  const prev=q=>esc(String(q.prompt).replace(/\[\[(.+?)\]\]/g,'____').slice(0,90));
  m.innerHTML=`${bk('tree')}<h2 style="margin-top:10px">❓ أسئلة: ${esc(l.title)}</h2><p class="m">${qcache.length} سؤال</p><div class="card" style="margin-top:10px">`+
  (qcache.map((q,i)=>`<div class="li wr" style="cursor:default"><span>${i+1}. ${QT[q.type]?QT[q.type].i:''} <span class="m">${esc(QT[q.type]?QT[q.type].n:q.type)}</span><br>${prev(q)}</span><span class="acts">${bt('mvq','↑',`data-id="${esc(q.id)}" data-d="-1"`)}${bt('mvq','↓',`data-id="${esc(q.id)}" data-d="1"`)}${bt('qedit','✏️',`data-id="${esc(q.id)}"`)}${bt('qdel','🗑',`data-id="${esc(q.id)}"`)}</span></div>`).join('')||'<p class="m">لا توجد أسئلة بعد.</p>')+
- `</div><button class="btn" style="margin-top:12px;width:100%" data-act="cgo" data-s="qtype" data-id="${esc(l.id)}">＋ إضافة سؤال</button>`;
+ `</div><button class="btn" style="margin-top:12px;width:100%" data-act="cgo" data-s="qtype" data-id="${esc(l.id)}">＋ إضافة سؤال</button><button class="btn gh" style="margin-top:8px;width:100%" data-act="cgo" data-s="tree">← رجوع للدروس</button>`;
 }
 function qTypeScreen(m){
  m.innerHTML=`${bk('questions',`data-id="${esc(cs.id)}"`)}<h2 style="margin-top:10px">اختر نموذج السؤال</h2><div class="grid" style="margin-top:8px">${Object.keys(QT).map(k=>`<div class="card qt" data-act="qnew" data-t="${k}"><span class="ic2">${QT[k].i}</span><div><b>${QT[k].n}</b><p class="m">${QT[k].d}</p><p class="m">مثال: ${QT[k].x}</p></div></div>`).join('')}</div>`;
@@ -704,14 +712,14 @@ async function audioScreen(m){
 function qFormRender(){
  const m=$('#main'),d=qf.d,t=qf.type,T=QT[t];
  const lbl={mcq:'نص السؤال',multi:'نص السؤال',tf:'العبارة',fill:'الجملة (ضع الكلمة الناقصة بين [[ ]])',match:'التعليمات',order:'التعليمات'}[t];
- const rw=(x)=>`<div class="row" style="flex-wrap:nowrap;align-items:center">${x}</div>`;
+ const rw=(x)=>`<div class="qr">${x}</div>`;
  let body='';
  if(t==='mcq'||t==='multi'){const mc=t==='multi';
-  body=`<p class="m">اضغط الدائرة لتحديد ${mc?'الإجابات الصحيحة':'الإجابة الصحيحة'}</p>`+d.options.map((o,i)=>{const on=mc?d.correct.includes(i):d.correct===i;return rw(`<button class="btn sm${on?'':' gh'}" data-act="qcor" data-i="${i}">${on?'✓':'○'}</button><input id="qo${i}" value="${esc(o)}" placeholder="الخيار ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)}).join('')+(d.options.length<6?'<button class="btn sm gh" data-act="qadd">＋ خيار</button>':'');
+  body=`<p class="m">اضغط الدائرة لتحديد ${mc?'الإجابات الصحيحة':'الإجابة الصحيحة'}</p>`+d.options.map((o,i)=>{const on=mc?d.correct.includes(i):d.correct===i;return rw(`<button class="btn sm${on?'':' gh'}" data-act="qcor" data-i="${i}">${on?'✓':'○'}</button><input id="qo${i}" value="${esc(o)}" placeholder="الخيار ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)}).join('')+(d.options.length<6?'<div style="margin:6px 0 12px"><button class="btn sm gh" data-act="qadd">＋ خيار</button></div>':'');
  }else if(t==='tf')body=`<div class="row"><button class="btn sm${d.correct?'':' gh'}" data-act="qtf" data-v="1">✅ صح</button><button class="btn sm${d.correct?' gh':''}" data-act="qtf" data-v="0">❌ خطأ</button></div><p class="m">الإجابة الصحيحة: ${d.correct?'صح':'خطأ'}</p>`;
  else if(t==='fill')body=`<p class="m">مثال: تُستخدم الأشعة السينية في تشخيص [[الكسور]]. يمكنك وضع أكثر من فراغ، ومرادفات بعلامة | مثل [[الكسور|كسور]].</p><div class="row"><button class="btn sm${d.mode==='type'?'':' gh'}" data-act="qmode" data-v="type">يكتب الطالب الإجابة</button><button class="btn sm${d.mode==='bank'?'':' gh'}" data-act="qmode" data-v="bank">يختار من قائمة</button></div>`+(d.mode==='bank'?`<input id="qdis" value="${esc(d.distractors)}" placeholder="كلمات مشتتة إضافية (افصل بفاصلة)">`:'');
- else if(t==='match')body='<p class="m">اكتب العنصر في الخانة الأولى وما يناسبه في الثانية.</p>'+d.pairs.map((p,i)=>rw(`<input id="qa${i}" value="${esc(p[0])}" placeholder="العنصر ${i+1}"><span>↔</span><input id="qb${i}" value="${esc(p[1])}" placeholder="ما يناسبه"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.pairs.length<6?'<button class="btn sm gh" data-act="qadd">＋ زوج</button>':'');
- else body='<p class="m">اكتب العناصر بالترتيب الصحيح، وسيخلطها الموقع للطالب.</p>'+d.items.map((o,i)=>rw(`<b>${i+1}</b><input id="qo${i}" value="${esc(o)}" placeholder="العنصر ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.items.length<8?'<button class="btn sm gh" data-act="qadd">＋ عنصر</button>':'');
+ else if(t==='match')body='<p class="m">اكتب العنصر في الخانة الأولى وما يناسبه في الثانية.</p>'+d.pairs.map((p,i)=>rw(`<input id="qa${i}" value="${esc(p[0])}" placeholder="العنصر ${i+1}"><span>↔</span><input id="qb${i}" value="${esc(p[1])}" placeholder="ما يناسبه"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.pairs.length<6?'<div style="margin:6px 0 12px"><button class="btn sm gh" data-act="qadd">＋ زوج</button></div>':'');
+ else body='<p class="m">اكتب العناصر بالترتيب الصحيح، وسيخلطها الموقع للطالب.</p>'+d.items.map((o,i)=>rw(`<b>${i+1}</b><input id="qo${i}" value="${esc(o)}" placeholder="العنصر ${i+1}"><button class="btn sm gh" data-act="qrm" data-i="${i}">✕</button>`)).join('')+(d.items.length<8?'<div style="margin:6px 0 12px"><button class="btn sm gh" data-act="qadd">＋ عنصر</button></div>':'');
  m.innerHTML=`${bk('questions',`data-id="${esc(qf.lesson_id)}"`)}<div class="card" style="margin-top:12px"><h2>${T.i} ${T.n}${qf.id?' (تعديل)':''}</h2><label class="m">${lbl}</label><textarea id="qp" rows="3">${esc(qf.prompt)}</textarea>${body}<label class="m">شرح الإجابة (اختياري، يظهر للطالب بعد الحل)</label><textarea id="qe" rows="2">${esc(qf.explanation)}</textarea><button class="btn" data-act="qsave">حفظ السؤال</button></div>`;
 }
 function syncQF(){
